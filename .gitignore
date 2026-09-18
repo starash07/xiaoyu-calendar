@@ -1,0 +1,11 @@
+# 依赖与下载缓存
+app/node_modules/
+.cache/
+
+# Demo 运行时数据（本机日程、Electron 自身缓存、自测截图）
+app/.data/
+app/.data-selftest/
+
+# 系统文件
+Thumbs.db
+desktop.ini
