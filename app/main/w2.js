@@ -1,6 +1,6 @@
 // W2 下拉窗：不透明、可拖。拖到屏幕顶 / 左 / 右边缘 20px 内松开就吸附；
 // 吸附后鼠标离开 500ms 收起，只在边缘露出 3px，鼠标碰到就滑出。底边和两块屏幕相接的边不吸附。
-const { BrowserWindow, screen, nativeTheme } = require('electron');
+const { BrowserWindow, screen } = require('electron');
 const path = require('path');
 const W = require('./win32');
 const P = require('./paths');
@@ -29,8 +29,8 @@ class W2 {
     this.dock = s.dock || null;
     if (this.dock) this.dockDisplayId = screen.getDisplayMatching(b).id;
     const win = this.win = new BrowserWindow({
-      ...b, minWidth: 380, minHeight: 460, frame: false, resizable: true, skipTaskbar: true, show: false,
-      alwaysOnTop: !!this.dock, backgroundColor: nativeTheme.shouldUseDarkColors ? '#1a1d1c' : '#f6f7f6',
+      ...b, minWidth: 380, minHeight: 460, frame: false, transparent: true, hasShadow: true, resizable: true, skipTaskbar: true, show: false,
+      alwaysOnTop: !!this.dock, backgroundColor: '#00000000',
       webPreferences: { preload: P.PRELOAD, backgroundThrottling: false },
     });
     win.setMenu(null);
@@ -54,7 +54,7 @@ class W2 {
   }
 
   initialBounds(s) {
-    const w = s.width || 480, h = s.height || 640;
+    const w = s.width || 480, h = s.height || 720;
     if (s.x != null && s.y != null) {
       const b = { x: s.x, y: s.y, width: w, height: h };
       const onScreen = screen.getAllDisplays().some(({ bounds: d }) => b.x < d.x + d.width && b.x + w > d.x && b.y < d.y + d.height && b.y + h > d.y);

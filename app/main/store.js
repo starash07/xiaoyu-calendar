@@ -20,7 +20,7 @@ const DEFAULT_SETTINGS = {
     // 字体颜色的初始默认值要在 Demo 里调，这里先用白色
     appearance: { panelColor: '#000000', panelOpacity: 28, blur: 14, textColor: '#FFFFFF', barFontSize: 10, barHeight: 12, width: 420 },
   },
-  w2: { dock: null, x: null, y: null, width: 480, height: 640, theme: 'system' },
+  w2: { dock: null, x: null, y: null, width: 480, height: 720, theme: 'light' },
   // 统一提醒选项。默认勾哪些、提前几天还没定，这里是 Demo 的临时默认
   reminder: { startBefore: { on: true, days: 1 }, startDay: true, endBefore: { on: false, days: 1 }, endDay: true },
   // 开机自启：Demo 默认不开，免得往系统启动项里写东西；托盘菜单里可以打开

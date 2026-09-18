@@ -8,6 +8,7 @@
   "scripts": {
     "start": "electron .",
     "selftest": "electron . --selftest",
+    "preview:main": "node scripts/preview-main.js --serve",
     "postinstall": "node node_modules/electron/install.js"
   },
   "devDependencies": {

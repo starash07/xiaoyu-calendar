@@ -1,0 +1,1330 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>日程 · 主界面交互预览</title>
+<style>/* 日历与甘特条的公共样式；颜色由各窗口通过 --fg / --fg2 / --fg3 / --hl / --rule / --done-* 提供 */
+[hidden] { display: none !important; }
+.cal-wd { display: grid; grid-template-columns: repeat(7, 1fr); font-size: 11px; color: var(--fg3); padding-bottom: 4px; }
+.cal-wd span { padding-left: 3px; }
+.cal-week { margin-bottom: 6px; }
+.cal-dates { display: grid; grid-template-columns: repeat(7, 1fr); font-size: 11px; line-height: 15px; color: var(--fg2); }
+.cal-dc { padding: 0 3px; }
+.cal-dc.out { color: var(--fg3); }
+.cal-dc.today { color: var(--hl); font-weight: 700; }
+.cal-lanes { position: relative; margin-top: 3px; }
+.cal-bar { position: absolute; box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-bar.done { background: var(--done-bg); color: var(--done-fg); }
+.cal-bar.hot, .cal-bar.sel { box-shadow: 0 0 0 1.5px var(--hl); z-index: 1; }
+
+.detail { display: flex; gap: 9px; border-top: 1px solid var(--rule); margin-top: 10px; padding: 10px 3px 0; }
+.dt-bar { width: 3px; border-radius: 2px; flex-shrink: 0; }
+.dt-body { min-width: 0; flex: 1; }
+.dt-title { font-size: 12px; color: var(--fg); margin-bottom: 3px; word-break: break-word; }
+.dt-meta { font-size: 11px; line-height: 1.6; color: var(--fg2); }
+.dt-note { font-size: 11px; line-height: 1.6; color: var(--fg2); white-space: pre-wrap; word-break: break-word; margin-top: 2px; }
+</style>
+<style>:root {
+  color-scheme: light;
+  --bg: #ffffff; --surface: #ffffff; --field: #fbfdff;
+  --fg: #335775; --fg2: #6b859c; --fg3: #91a3b1;
+  --rule: #edf2f5; --rule2: #d9e5ed; --hover: #f1f7fb;
+  --hl: #47799f; --accent: #e9787b; --accent-fg: #ffffff; --accent-soft: #fff1ee;
+  --done-bg: #edf0f2; --done-fg: #84929e; --danger: #c84f5a;
+  --shadow: 0 14px 38px #274d6930;
+}
+* { box-sizing: border-box; }
+html { margin: 0; height: 100%; background: transparent; }
+body {
+  margin: 0; height: 100%; display: flex; flex-direction: column; overflow: hidden;
+  background: var(--bg); color: var(--fg); border: 1px solid #e2ebf1; border-radius: 14px;
+  font: 13px/1.6 "Microsoft YaHei UI", "Microsoft YaHei", sans-serif; user-select: none;
+}
+button, input, textarea { font: inherit; }
+button { color: inherit; cursor: pointer; transition: background-color .15s, color .15s; }
+button:disabled { opacity: .5; cursor: wait; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--hl); outline-offset: 2px; }
+button svg, .section-heading svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-thumb { background: #cfdee7; border-radius: 4px; }
+.spacer { flex: 1; }
+
+.top { display: flex; align-items: center; gap: 8px; height: 52px; padding: 0 17px; flex-shrink: 0; border-bottom: 1px solid var(--rule); -webkit-app-region: drag; }
+.top button { -webkit-app-region: no-drag; }
+.brand { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; letter-spacing: 2px; }
+.brand-mark { display: grid; grid-template-columns: 5px 5px; gap: 3px; transform: rotate(-8deg); }
+.brand-mark i { width: 5px; height: 5px; border-radius: 2px; background: #a8d8e9; }
+.brand-mark i:nth-child(2) { background: #f4b7ac; }
+.brand-mark i:nth-child(3) { background: #f6d788; }
+.brand-mark i:nth-child(4) { background: #a4d9c5; }
+.brand-note { margin-left: 3px; font-size: 10px; font-weight: 400; color: var(--fg3); letter-spacing: .7px; }
+.top-divider { width: 1px; height: 15px; background: var(--rule2); margin: 0 2px; }
+.icon { width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--fg2); flex-shrink: 0; }
+.icon:hover, .ghost:hover { background: var(--hover); color: var(--fg); }
+.icon.small { width: 24px; height: 24px; }
+.ghost { min-height: 31px; padding: 0 10px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 7px; background: transparent; color: var(--fg2); }
+.settings-button { font-size: 11px; }
+.primary { display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 33px; padding: 0 13px; border: 0; border-radius: 7px; background: var(--accent); color: var(--accent-fg); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.primary:hover { background: #da686d; }
+.plus { font-size: 20px; line-height: 1; font-weight: 400; }
+
+.workspace, .calendar-panel { flex: 1; min-width: 0; min-height: 0; }
+.workspace { display: flex; flex-direction: column; }
+.calendar-panel { display: flex; flex-direction: column; padding-top: 17px; }
+.calendar-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 18px; margin-bottom: 9px; flex-shrink: 0; }
+.month-kicker { color: var(--fg2); font: 9px/1.5 "Segoe UI", sans-serif; letter-spacing: 2px; margin-bottom: 1px; }
+.title { margin: 0; font-size: 32px; font-weight: 400; line-height: 1.25; letter-spacing: -1px; color: #44779d; }
+.month-unit { font-size: 19px; margin-left: 5px; }
+.nav { display: flex; align-items: center; gap: 1px; }
+.nav .ghost { min-height: 30px; font-size: 11px; color: #557e9e; background: #f4f8fb; margin: 0 3px; }
+.calendar-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 7px; padding: 0 18px 13px; flex-shrink: 0; }
+.month-count { color: var(--fg3); font-size: 10px; }
+.month-count strong { color: var(--fg); font-weight: 500; font-size: 12px; margin: 0 2px; }
+.create-actions { display: flex; align-items: center; gap: 5px; }
+.range-button { font-size: 10px; padding: 0 7px; }
+.range-button svg { width: 15px; height: 15px; }
+
+.reminder-section { flex-shrink: 0; max-height: 86px; display: flex; flex-direction: column; margin: 0 18px 12px; }
+.reminder-section.expanded { max-height: 240px; overflow: hidden; }
+.reminder-section.is-animating { overflow: hidden; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; min-height: 25px; gap: 8px; font-size: 11px; color: var(--fg2); flex-shrink: 0; }
+.reminder-count { grid-column: 3; grid-row: 3; justify-self: end; color: #b4928e; font-size: 9px; line-height: 1.3; padding-right: 2px; }
+.reminders { position: relative; height: 82px; min-height: 0; overflow: visible; margin-top: 3px; }
+.reminder-section.expanded .reminders { flex: 0 0 auto; height: auto; max-height: 237px; overflow-y: auto; padding: 2px 2px 6px; }
+.rm-item { position: absolute; inset: 0 1px auto; min-height: 64px; display: grid; grid-template-columns: 5px minmax(0, 1fr) auto; align-items: center; gap: 1px 8px; padding: 9px 9px 8px; border: 1px solid #f2dfdb; border-radius: 8px; background: #fffdfc; box-shadow: 0 4px 12px #8f5f5420; cursor: pointer; opacity: 0; pointer-events: none; transform-origin: top center; transition: box-shadow .18s ease; }
+.rm-item.deck-0 { z-index: 4; opacity: 1; pointer-events: auto; transform: translateY(0) scale(1); }
+.rm-item.deck-1 { z-index: 3; opacity: .92; transform: translateY(7px) scale(.975); }
+.rm-item.deck-2 { z-index: 2; opacity: .72; transform: translateY(13px) scale(.95); }
+.rm-item.deck-0:hover { box-shadow: 0 7px 16px #8f5f5429; }
+.reminder-section.expanded .rm-item { position: relative; inset: auto; min-height: 61px; margin: 0 0 7px; opacity: 1; pointer-events: auto; transform: none; box-shadow: 0 2px 7px #8f5f5418; }
+.reminder-section.expanded .rm-item:last-child { margin-bottom: 0; }
+.rm-dot { width: 5px; height: 5px; border-radius: 50%; grid-row: 1 / 3; align-self: start; margin-top: 7px; }
+.rm-title { min-width: 0; font-size: 11px; line-height: 1.55; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.rm-reason { grid-column: 2; color: #8c9eab; font-size: 9px; white-space: nowrap; }
+.rm-bottom { grid-column: 3; grid-row: 1 / 3; display: flex; align-items: center; gap: 5px; }
+.rm-date { display: none; }
+.rm-ok { min-height: 23px; padding: 1px 7px; border: 1px solid #eededb; border-radius: 5px; background: #fff; color: #9b6e70; font-size: 9px; }
+.rm-ok:hover { background: #fff0eb; }
+
+.newbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-shrink: 0; padding: 7px 10px; margin: 0 18px 10px; border-radius: 7px; background: #edf6fc; color: #527fa0; font-size: 10px; }
+.newbar button { border: 0; background: none; color: #527fa0; white-space: nowrap; }
+.calwrap { flex: 1; min-height: 106px; overflow-y: auto; position: relative; padding: 0 2px 5px; margin: 0 16px; }
+#cal { min-height: 100%; display: flex; flex-direction: column; }
+.cal-wd { position: sticky; top: 0; z-index: 4; background: var(--bg); flex-shrink: 0; padding: 0 0 8px; font-size: 10px; color: #7392a8; }
+.cal-wd span { padding-left: 7px; }
+.cal-wd span:nth-child(n+6) { color: #d9858c; }
+.cal-week { position: relative; flex: 0 0 auto; min-height: 68px; margin: 0; padding: 6px 0 8px; border-top: 1px solid var(--rule); }
+.cal-dates { font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif; font-size: 11px; line-height: 23px; color: #537c99; }
+.cal-dc { padding-left: 3px; }
+.date-number { display: inline-flex; align-items: center; justify-content: center; min-width: 23px; height: 23px; border-radius: 50%; }
+.cal-dc:nth-child(n+6) { color: #d48189; }
+.cal-dc.out { color: #b5c2cb; }
+.cal-dc.today .date-number { background: #ee868b; color: #fff; }
+.cal-lanes { margin-top: 5px; }
+.calwrap .cal-bar { cursor: pointer; font-weight: 500; letter-spacing: .1px; transition: transform .15s ease, filter .15s ease, box-shadow .15s ease; }
+.calwrap .cal-bar.hot { filter: brightness(1.025) saturate(1.04); transform: translateY(-1px); box-shadow: 0 3px 7px #456b8424; z-index: 2; }
+.calwrap .cal-bar.sel { filter: brightness(.985) saturate(1.06); transform: translateY(-1px); box-shadow: 0 4px 10px #456b8433; z-index: 2; }
+.cal-bar.is-pinned::before { content: ""; display: inline-block; width: 4px; height: 4px; background: currentColor; transform: rotate(45deg); margin: 0 5px 2px 1px; opacity: .75; }
+.calwrap.newmode { cursor: crosshair; }
+.calwrap.newmode .cal-bar { cursor: crosshair; }
+.cal-dc.hov .date-number { background: #e8f3fb; color: #447da5; }
+.cal-preview { position: absolute; height: 22px; border-radius: 4px; background: #91c7e8; opacity: .65; pointer-events: none; z-index: 3; }
+.empty { margin: 14px 0 8px; text-align: center; font-size: 11px; color: var(--fg3); }
+.empty button { padding: 0 4px; border: 0; background: none; color: #c55f67; }
+
+.detail-section { flex: 0 1 215px; min-height: 104px; max-height: 215px; display: flex; flex-direction: column; overflow: hidden; padding: 10px 18px 11px; border-top: 1px solid var(--rule2); background: #fbfdff; }
+.detail-section .section-heading { margin-bottom: 6px; }
+.w2detail { flex: 1; min-height: 0; overflow-y: auto; margin: 0; padding: 0 3px 0 0; border: 0; gap: 9px; user-select: text; }
+.w2detail .dt-bar { width: 3px; border-radius: 2px; }
+.w2detail .dt-title { font-size: 13px; line-height: 1.55; font-weight: 600; margin-bottom: 4px; }
+.w2detail .dt-meta { font-size: 10px; line-height: 1.75; color: #6f8ca3; }
+.w2detail .dt-note { font-size: 11px; line-height: 1.75; margin-top: 6px; }
+.dt-pin { display: inline-block; margin-left: 5px; font-size: 9px; font-weight: 400; color: #a07532; }
+.dt-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; flex-shrink: 0; }
+.dt-actions button { min-height: 28px; padding: 3px 4px; border: 1px solid var(--rule2); border-radius: 6px; background: #fff; font-size: 10px; }
+.dt-actions button:first-child { background: #eef6fb; color: #426f93; border-color: #e3eef5; }
+.dt-actions button:hover { background: var(--hover); }
+.dt-actions .danger { color: var(--danger); }
+
+.calendar-footer { height: 36px; padding: 0 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 9px; color: var(--fg3); border-top: 1px solid var(--rule); }
+.legend-dot { display: inline-block; width: 5px; height: 5px; background: #aad5e9; border-radius: 50%; margin: 0 5px 1px 0; }
+.legend-done { margin-left: 13px; }
+.legend-done .legend-dot { background: #d4dce1; }
+.daylabel { position: fixed; z-index: 30; padding: 2px 8px; border-radius: 6px; background: var(--hl); color: #fff; font-size: 11px; pointer-events: none; }
+.toast { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 50; max-width: calc(100% - 30px); padding: 8px 14px; border-radius: 8px; background: var(--hl); color: #fff; font-size: 11px; box-shadow: var(--shadow); pointer-events: none; }
+.toast.bad { background: var(--danger); }
+
+/* 弹窗 */
+.overlay { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0, 0, 0, 0.32); }
+.dialog { width: 100%; max-width: 440px; max-height: 100%; overflow-y: auto; padding: 16px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); user-select: text; }
+.dialog h3 { margin: 0 0 12px; font-size: 15px; }
+.field { margin-bottom: 12px; }
+.field > label, .field-label { display: block; margin-bottom: 4px; font-size: 12px; color: var(--fg2); }
+.field input[type=text], .field input[type=date], .field input[type=number], .field textarea {
+  width: 100%; padding: 6px 8px; border: 1px solid var(--rule2); border-radius: 6px; background: var(--field); color: var(--fg); font: inherit;
+}
+.field textarea { min-height: 72px; resize: vertical; }
+.row2 { display: flex; gap: 10px; }
+.row2 > .field { flex: 1; }
+.err { margin-top: 4px; font-size: 12px; color: var(--danger); }
+.preview-bar { height: 18px; line-height: 18px; padding: 0 6px; margin-bottom: 14px; border-radius: 3px; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.swatches { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.swatch { width: 22px; height: 22px; border: 0; border-radius: 5px; padding: 0; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12); }
+.swatch.on { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--hl); }
+.sw-sub { font-size: 11px; color: var(--fg3); margin: 6px 0 4px; }
+.custom-color { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+.custom-color input[type=color] { width: 30px; height: 26px; padding: 0; border: 1px solid var(--rule2); border-radius: 5px; background: none; }
+.custom-color input[type=text] { width: 96px; padding: 4px 6px; border: 1px solid var(--rule2); border-radius: 5px; background: var(--field); color: var(--fg); font: inherit; }
+.check { display: flex; align-items: center; gap: 6px; margin: 4px 0; cursor: pointer; }
+.remind-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; margin-top: 6px; padding-left: 22px; }
+.remind-grid input[type=number] { width: 48px; padding: 2px 4px; border: 1px solid var(--rule2); border-radius: 4px; background: var(--field); color: var(--fg); font: inherit; }
+.remind-grid.off { opacity: 0.45; pointer-events: none; }
+.hint { font-size: 12px; color: var(--fg3); }
+.actions { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
+.actions .spacer { flex: 1; }
+.confirm-box { width: 100%; max-width: 320px; padding: 18px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); }
+.confirm-box p { margin: 0 0 16px; font-size: 14px; word-break: break-word; }
+
+/* 设置页 */
+.page { position: fixed; inset: 0; z-index: 35; overflow-y: auto; background: var(--bg); padding: 0 16px 24px; }
+.page-head { position: sticky; top: 0; display: flex; align-items: center; gap: 8px; height: 44px; margin: 0 -16px 8px; padding: 0 10px; background: var(--bg); border-bottom: 1px solid var(--rule); -webkit-app-region: drag; }
+.page-head button { -webkit-app-region: no-drag; }
+.page-head h2 { margin: 0; font-size: 15px; }
+.group { margin-top: 16px; }
+.group h3 { margin: 0 0 8px; font-size: 13px; color: var(--fg2); }
+.srow { display: grid; grid-template-columns: 96px 1fr 64px; align-items: center; gap: 10px; min-height: 32px; }
+.srow input[type=range] { width: 100%; accent-color: var(--accent); }
+.srow input[type=color] { width: 40px; height: 26px; padding: 0; border: 1px solid var(--rule2); border-radius: 5px; background: none; }
+.srow output { text-align: right; font-variant-numeric: tabular-nums; color: var(--fg2); }
+.warn { margin: 4px 0 0 106px; font-size: 12px; color: var(--danger); }
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+
+
+
+/* 填写和设置沿用既有功能，基础控件与主界面保持一致。 */
+.overlay { background: #39576d32; padding: 16px; }
+.dialog { max-width: 440px; padding: 20px; border: 1px solid var(--rule); border-radius: 12px; }
+.dialog h3 { font-size: 16px; font-weight: 500; margin-bottom: 14px; }
+.field input, .field textarea, .row2 > .field { min-width: 0; }
+.preview-bar { height: 22px; line-height: 22px; }
+.swatch { border-radius: 50%; box-shadow: none; }
+.swatch.on { box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--hl); }
+.check { font-size: 12px; }
+input[type=checkbox], input[type=radio], input[type=range] { accent-color: #668eac; }
+.dialog .actions { position: sticky; bottom: -20px; z-index: 3; margin: 16px -20px -20px; padding: 12px 20px; background: #fff; border-top: 1px solid var(--rule); }
+.plain-btn, .danger-btn { min-height: 31px; padding: 4px 13px; border: 1px solid var(--rule2); border-radius: 6px; background: #fff; }
+.plain-btn:hover, .danger-btn:hover { background: var(--hover); }
+.danger-btn { color: var(--danger); }
+.page { padding: 0 20px 28px; border-radius: inherit; }
+.page-head { height: 52px; margin: 0 -4px 8px; padding: 0; z-index: 1; }
+.page-head h2 { font-size: 16px; font-weight: 500; }
+.group { margin-top: 21px; }
+.srow { min-height: 36px; }
+.cal-bar.flash { animation: flash .6s ease-in-out; }
+@keyframes flash { 0%, 100% { filter: none; } 50% { filter: brightness(1.15); } }
+
+@media (max-width: 420px) {
+  body { border-radius: 11px; }
+  .top { padding: 0 13px; }
+  .brand-note, .settings-button svg { display: none; }
+  .settings-button { padding: 0 7px; }
+  .calendar-heading, .calendar-toolbar { padding-left: 14px; padding-right: 14px; }
+  .reminder-section, .newbar { margin-left: 14px; margin-right: 14px; }
+  .calwrap { margin-left: 12px; margin-right: 12px; }
+  .calendar-footer, .detail-section { padding-left: 14px; padding-right: 14px; }
+  .range-button span, .calendar-tip { display: none; }
+  .range-button { padding: 0 7px; }
+  .row2 { gap: 6px; }
+  .remind-grid { padding-left: 0; gap: 2px 4px; }
+}
+@media (max-height: 560px) {
+  .top { height: 46px; }
+  .calendar-panel { padding-top: 10px; }
+  .calendar-heading { margin-bottom: 4px; }
+  .title { font-size: 27px; }
+  .calendar-toolbar { padding-bottom: 8px; }
+  .reminder-section { margin-bottom: 8px; }
+  .cal-week { min-height: 58px; }
+  .detail-section { flex-basis: 150px; max-height: 150px; min-height: 90px; }
+  .calendar-footer { height: 31px; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>日程<span class="brand-note">交互预览 · 数据不保存</span></div>
+  <div class="spacer"></div>
+  <button class="ghost settings-button" id="settingsBtn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="16" cy="17" r="3"/></svg>设置</button>
+  <span class="top-divider" aria-hidden="true"></span>
+  <button class="icon" id="closeBtn" type="button" title="收起窗口" aria-label="收起窗口"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M7 17 17 7"/></svg></button>
+</header>
+
+<main class="workspace">
+  <section class="calendar-panel" aria-label="月历">
+    <div class="calendar-heading">
+      <div class="month-label"><div class="month-kicker" id="monthKicker"></div><h1 class="title" id="title"></h1></div>
+      <div class="nav" aria-label="切换月份">
+        <button class="icon" id="prevBtn" type="button" title="上一月（PageUp）" aria-label="上一月"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 7-5 5 5 5"/></svg></button>
+        <button class="ghost" id="todayBtn" type="button">今天</button>
+        <button class="icon" id="nextBtn" type="button" title="下一月（PageDown）" aria-label="下一月"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 7 5 5-5 5"/></svg></button>
+      </div>
+    </div>
+    <div class="calendar-toolbar">
+      <div class="month-count" id="monthCount"></div>
+      <div class="create-actions">
+        <button class="ghost range-button" id="rangeBtn" type="button" title="在日历上拖选一段日期"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4m8-4v4M4 10h16m-12 4h3m2 3h3"/></svg><span>选日期</span></button>
+        <button class="primary" id="newBtn" type="button" title="新建日程（Ctrl+N）"><span class="plus" aria-hidden="true">+</span>新建日程</button>
+      </div>
+    </div>
+    <section class="reminder-section" id="reminderSection" hidden aria-label="待确认提醒">
+      <div class="reminders" id="reminders" hidden></div>
+    </section>
+    <div class="newbar" id="newbar" hidden><span>在日历上拖选日期，松开后填写日程</span><button id="cancelRangeBtn" type="button">取消</button></div>
+    <div class="calwrap" id="calwrap">
+      <div id="cal"></div>
+      <div class="empty" id="empty" hidden>这个月还是空白的。<button id="emptyNewBtn" type="button">记下第一件事</button></div>
+    </div>
+    <section class="detail-section" id="detailSection" hidden aria-label="日程详情">
+      <div class="section-heading"><span id="detailLabel">日程详情</span><button class="icon small" id="clearSelectionBtn" type="button" title="取消选中" aria-label="取消选中"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M7 17 17 7"/></svg></button></div>
+      <div class="detail w2detail" id="detail" hidden></div>
+      <div class="dt-actions" id="detailActions" hidden></div>
+    </section>
+    <footer class="calendar-footer"><span><i class="legend-dot"></i>日程<span class="legend-done"><i class="legend-dot"></i>已完成</span></span><span class="calendar-tip">悬停查看 · 点击操作</span></footer>
+  </section>
+</main>
+
+<div class="daylabel" id="daylabel" hidden></div>
+<div class="toast" id="toast" hidden></div>
+<div class="overlay" id="modal" hidden></div>
+<div class="overlay" id="confirm" hidden></div>
+<div class="page" id="settings" hidden></div>
+
+<script>// 日期工具：日程只精确到天，统一用 'YYYY-MM-DD' 字符串。主进程和页面共用这一份。
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.RCDates = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  const pad = n => String(n).padStart(2, '0');
+  const toStr = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return toStr(d); };
+  // b 减 a 的天数；四舍五入避开夏令时的 23/25 小时
+  const diff = (a, b) => Math.round((parse(b) - parse(a)) / 86400000);
+  const today = () => toStr(new Date());
+  const md = s => { const d = parse(s); return `${d.getMonth() + 1}/${d.getDate()}`; };
+  const ymd = s => { const d = parse(s); return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`; };
+  const WEEK = '日一二三四五六';
+  const weekday = s => WEEK[parse(s).getDay()];
+  const isValid = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && toStr(parse(s)) === s;
+
+  // 月网格：周一开头，第一周和最后一周不满的部分用相邻月份的日期补齐
+  function monthGrid(year, month) {
+    const first = new Date(year, month, 1);
+    const lead = (first.getDay() + 6) % 7;
+    const days = new Date(year, month + 1, 0).getDate();
+    return { start: toStr(new Date(year, month, 1 - lead)), weeks: Math.ceil((lead + days) / 7) };
+  }
+
+  // 详情里的日期：单日「9/11」，多日「9/14 – 9/22」，跨年时带年份
+  function rangeText(start, end) {
+    if (start === end) return md(start);
+    if (start.slice(0, 4) !== end.slice(0, 4)) return `${ymd(start)} – ${ymd(end)}`;
+    return `${md(start)} – ${md(end)}`;
+  }
+
+  // 进度文案（需求 3.2 日程详情）
+  function progressText(task, day) {
+    const total = diff(task.startDate, task.endDate) + 1;
+    const single = total === 1;
+    if (task.done) return single ? '已完成' : `已完成 · 共 ${total} 天`;
+    if (day < task.startDate) {
+      const n = diff(day, task.startDate);
+      return single ? `${n} 天后` : `${n} 天后开始 · 共 ${total} 天`;
+    }
+    if (day > task.endDate) return single ? '已结束' : `已结束 · 共 ${total} 天`;
+    return single ? '就是今天' : `第 ${diff(task.startDate, day) + 1} 天 / 共 ${total} 天`;
+  }
+
+  return { pad, toStr, parse, addDays, diff, today, md, ymd, weekday, isValid, monthGrid, rangeText, progressText };
+});
+</script>
+<script>// 颜色工具：条上文字自动取深浅、W1 文字配色、对比度提示
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.RCColors = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  const hexRgb = h => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+  const lin = c => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+  const lum = ([r, g, b]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  const contrast = (a, b) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  const DARK_L = lum([17, 17, 17]);
+  const isHex = s => typeof s === 'string' && /^#[0-9a-fA-F]{6}$/.test(s);
+  const rgba = (hex, a) => `rgba(${hexRgb(hex).join(',')},${a})`;
+
+  function hsl([r, g, b]) {
+    r /= 255; g /= 255; b /= 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+    if (!d) return [0, 0, l * 100];
+    const s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+    const h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return [h * 60, s * 100, l * 100];
+  }
+
+  // 条上文字：白字、深字里挑对比度高的；深字用和条同色相的深色
+  function barText(hex) {
+    const rgb = hexRgb(hex), L = lum(rgb);
+    if (contrast(L, 1) >= contrast(L, DARK_L)) return '#ffffff';
+    const [h, s] = hsl(rgb);
+    return `hsl(${Math.round(h)} ${Math.round(Math.min(s, 70))}% 15%)`;
+  }
+
+  // W1 文字配色：按所选字体颜色的亮度选透明度档位（需求 4.2）
+  function textTokens(hex) {
+    const rgb = hexRgb(hex), light = lum(rgb) > 0.4;
+    const a = light ? [0.92, 0.58, 0.34, 0.10] : [0.86, 0.56, 0.32, 0.08];
+    const c = al => `rgba(${rgb.join(',')},${al})`;
+    return {
+      fg: c(a[0]), fg2: c(a[1]), fg3: c(a[2]), rule: c(a[3]), hl: c(0.95),
+      edge: light ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.45)',
+    };
+  }
+
+  // 对比度提示：混合色 = 底板色 × 不透明度 + 壁纸平均色 × (1 − 不透明度)
+  function panelContrast(textHex, panelHex, opacity, wallRgb) {
+    const p = hexRgb(panelHex), t = hexRgb(textHex), w = wallRgb || [128, 128, 128];
+    const eff = [0, 1, 2].map(i => opacity * p[i] + (1 - opacity) * w[i]);
+    const ta = lum(t) > 0.4 ? 0.92 : 0.86;
+    const txt = [0, 1, 2].map(i => ta * t[i] + (1 - ta) * eff[i]);
+    return contrast(lum(txt), lum(eff));
+  }
+
+  const PRESETS = [
+    ['薄荷青', '#5DCAA5'], ['天空蓝', '#85B7EB'], ['薰衣草紫', '#AFA9EC'], ['樱花粉', '#ED93B1'],
+    ['珊瑚红', '#F0997B'], ['橘橙', '#EF9F27'], ['柠檬黄', '#FAC775'], ['草绿', '#97C459'],
+  ];
+
+  return { hexRgb, lum, contrast, isHex, rgba, barText, textTokens, panelContrast, PRESETS };
+});
+</script>
+<script>// 整月日历 + 甘特条：W1、W2 共用的排版和渲染
+(function (root) {
+  const D = root.RCDates, C = root.RCColors;
+
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  // 排序：置顶 → 开始早 → 跨度长 → 创建早
+  function cmp(p, q) {
+    return (q.pinned ? 1 : 0) - (p.pinned ? 1 : 0)
+      || (p.startDate < q.startDate ? -1 : p.startDate > q.startDate ? 1 : 0)
+      || (D.diff(q.startDate, q.endDate) - D.diff(p.startDate, p.endDate))
+      || String(p.createdAt).localeCompare(String(q.createdAt));
+  }
+
+  // 把一组日程放进这一周的泳道：每个分段放进最靠上、在它覆盖的几天里还空着的那一行
+  function place(list, ws, we, occ, base, segs) {
+    for (const t of list) {
+      if (t.endDate < ws || t.startDate > we) continue;
+      const a = Math.max(0, D.diff(ws, t.startDate));
+      const b = Math.min(6, D.diff(ws, t.endDate));
+      let lane = base;
+      while (occ[lane] && occ[lane].some(([x, y]) => a <= y && b >= x)) lane++;
+      (occ[lane] = occ[lane] || []).push([a, b]);
+      segs.push({ task: t, a, b, lane, cl: t.startDate < ws, cr: t.endDate > we });
+    }
+  }
+
+  // 一周的泳道：未完成的先排；已完成的只能排在未完成的下面，不插到上面的空位
+  function layoutWeek(tasks, ws) {
+    const we = D.addDays(ws, 6);
+    const open = tasks.filter(t => !t.done).sort(cmp);
+    const done = tasks.filter(t => t.done).sort(cmp);
+    const occ = [], segs = [];
+    place(open, ws, we, occ, 0, segs);
+    place(done, ws, we, occ, occ.length, segs);
+    return { segs, lanes: occ.length };
+  }
+
+  // 条的尺寸规则（需求 4.1）
+  function geometry(barH) {
+    return {
+      gap: Math.max(2, Math.round(barH * 0.22)),
+      padX: Math.max(3, Math.round(barH * 0.25)),
+      rad: Math.max(2, Math.min(4, Math.round(barH / 4))),
+    };
+  }
+
+  function monthHTML({ year, month, tasks, today, barH, fontSize }) {
+    const { start, weeks } = D.monthGrid(year, month);
+    const g = geometry(barH);
+    let html = '<div class="cal-wd">' + '一二三四五六日'.split('').map(w => `<span>${w}</span>`).join('') + '</div>';
+    for (let w = 0; w < weeks; w++) {
+      const ws = D.addDays(start, w * 7);
+      const { segs, lanes } = layoutWeek(tasks, ws);
+      html += `<div class="cal-week" data-start="${ws}"><div class="cal-dates">`;
+      for (let i = 0; i < 7; i++) {
+        const day = D.addDays(ws, i), d = D.parse(day);
+        const cls = (d.getMonth() !== month ? ' out' : '') + (day === today ? ' today' : '');
+        html += `<div class="cal-dc${cls}" data-date="${day}">${d.getDate()}</div>`;
+      }
+      const h = lanes ? lanes * barH + (lanes - 1) * g.gap : 0;
+      html += `</div><div class="cal-lanes" style="height:${h}px">`;
+      for (const { task: t, a, b, lane, cl, cr } of segs) {
+        // 跨周被截断的一端：直角、贴边；正常结束的一端：圆角、留 2px
+        const li = cl ? 0 : 2, ri = cr ? 0 : 2, rl = cl ? 0 : g.rad, rr = cr ? 0 : g.rad;
+        const style = `left:calc(${a * 100 / 7}% + ${li}px);width:calc(${(b - a + 1) * 100 / 7}% - ${li + ri}px);`
+          + `top:${lane * (barH + g.gap)}px;height:${barH}px;line-height:${barH}px;font-size:${fontSize}px;padding:0 ${g.padX}px;`
+          + `border-radius:${rl}px ${rr}px ${rr}px ${rl}px;`
+          + (t.done ? '' : `background:${t.color};color:${C.barText(t.color)};`);
+        html += `<div class="cal-bar${t.done ? ' done' : ''}" data-id="${t.id}" style="${style}">${esc(t.title)}</div>`;
+      }
+      html += '</div></div>';
+    }
+    return html;
+  }
+
+  // 给某个日程的所有分段加 / 去掉一个样式（悬停高亮、选中）
+  function markBars(container, cls, id) {
+    container.querySelectorAll('.cal-bar').forEach(el => el.classList.toggle(cls, !!id && el.dataset.id === id));
+  }
+
+  // 详情：标题、日期、进度、备注都完整显示，备注保留换行
+  function detailHTML(task, today) {
+    return `<i class="dt-bar" style="background:${task.done ? 'var(--done-bg)' : task.color}"></i>`
+      + `<div class="dt-body"><div class="dt-title">${esc(task.title)}</div>`
+      + `<div class="dt-meta">${D.rangeText(task.startDate, task.endDate)} · ${D.progressText(task, today)}</div>`
+      + (task.note ? `<div class="dt-note">${esc(task.note)}</div>` : '')
+      + '</div>';
+  }
+
+  // 提醒原因：按提醒种类和今天的日期算，提醒没确认留到后几天时文字也是对的
+  function reminderReason(kind, task, today) {
+    const isStart = kind === 'startBefore' || kind === 'startDay';
+    const n = D.diff(today, isStart ? task.startDate : task.endDate);
+    if (isStart) return n > 0 ? `${n} 天后开始` : n === 0 ? '今天开始' : '已开始';
+    return n > 0 ? `${n} 天后截止` : n === 0 ? '今天截止' : '已截止';
+  }
+
+  root.RCCal = { esc, cmp, layoutWeek, geometry, monthHTML, markBars, detailHTML, reminderReason };
+})(self);
+</script>
+<script>(function previewApi(settings) {
+  const D = window.RCDates;
+  const today = D.today(), date = D.parse(today), year = date.getFullYear(), month = date.getMonth();
+  const day = n => D.toStr(new Date(year, month, n));
+  const rows = [
+    ['整理本月计划', 1, 3, '#B6D9EC', '留出一点弹性，先安排最重要的几件事。', false, true],
+    ['阅读 · 一本新书', 3, 6, '#C8C4ED', '每天读一点，记下喜欢的句子。'],
+    ['项目方案整理', 7, 10, '#A7D7C7', '梳理需求，整理参考资料。\n周四前完成第一版。', true],
+    ['和朋友吃饭', 12, 12, '#F3BDAD', '提前订好位置。'],
+    ['新界面设计', 14, 20, '#B7DCEF', '整理功能，画出主界面，再一起看看实际效果。\n\n白底、柔和的蓝色文字，留一点活泼的颜色。', true],
+    ['整理照片', 16, 16, '#D0C8E9', '选出最喜欢的几张。'],
+    ['周末出游', 19, 20, '#F4D691', '带上相机和水。'],
+    ['完成本月复盘', 24, 26, '#B1DACA', '看看哪些事情做得不错，哪些可以慢一点。'],
+    ['假期准备', 28, 33, '#F2BEAE', '确认行程，收拾行李。'],
+  ];
+  let state = {
+    today, settings, w1: { pinned: false, embedded: false, degraded: false, wallAvg: [180, 194, 208] },
+    tasks: rows.map(([title, a, b, color, note, pinned, done], i) => ({
+      id: `preview-${i}`, title, startDate: day(a), endDate: day(b), color, note,
+      pinned: !!pinned, done: !!done, remind: null, createdAt: new Date(2026, 0, 1, 0, i).toISOString(), updatedAt: new Date().toISOString(),
+    })),
+    reminders: [],
+  };
+  // 三条未确认记录用于查看密度；日期和原因仍根据真实日期计算。
+  state.reminders = [4, 6, 7].map((n, i) => ({ id: `reminder-${i}`, taskId: `preview-${n}`, kind: i ? 'startBefore' : 'endDay', day: today, confirmed: false }));
+  const listeners = [];
+  const push = () => { for (const fn of listeners) fn(structuredClone(state)); };
+  const merge = (a, b) => {
+    for (const [k, v] of Object.entries(b)) {
+      if (v && typeof v === 'object' && !Array.isArray(v) && a[k]) merge(a[k], v);
+      else a[k] = v;
+    }
+  };
+  const ok = () => ({ ok: true });
+  window.rc = {
+    getState: async () => structuredClone(state),
+    onState: fn => { listeners.push(fn); }, onCommand: () => {},
+    setBlock: () => {}, w2Drag: () => {}, previewAppearance: () => {},
+    hideW2: () => window.W2App.toast('这是交互预览，关闭此标签页即可退出'),
+    createTask: async task => {
+      const id = crypto.randomUUID();
+      state.tasks.push({ ...task, id, done: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+      state.settings.lastColor = task.color;
+      push(); return { ok: true, id };
+    },
+    updateTask: async (id, patch) => {
+      const task = state.tasks.find(t => t.id === id);
+      if (!task) return { ok: false };
+      Object.assign(task, patch);
+      if (task.done) state.reminders = state.reminders.filter(r => r.taskId !== id || r.confirmed);
+      push(); return ok();
+    },
+    deleteTask: async id => {
+      state.tasks = state.tasks.filter(t => t.id !== id);
+      state.reminders = state.reminders.filter(r => r.taskId !== id);
+      push(); return ok();
+    },
+    confirmReminder: async id => { state.reminders.find(r => r.id === id).confirmed = true; push(); return ok(); },
+    saveSettings: async patch => { merge(state.settings, patch); push(); return ok(); },
+    setPinned: async pinned => { state.w1.pinned = pinned; push(); return ok(); },
+    resetW1: async () => ok(),
+    setAutoStart: async on => { state.settings.general.autoStart = on; push(); return ok(); },
+  };
+})({"version":1,"w1":{"pinned":false,"x":null,"y":null,"appearance":{"panelColor":"#000000","panelOpacity":28,"blur":14,"textColor":"#FFFFFF","barFontSize":10,"barHeight":12,"width":420}},"w2":{"dock":null,"x":null,"y":null,"width":480,"height":720,"theme":"light"},"reminder":{"startBefore":{"on":true,"days":1},"startDay":true,"endBefore":{"on":false,"days":1},"endDay":true},"general":{"autoStart":false,"onboardingDone":false},"recentColors":[],"lastColor":null});</script><script>// 主界面：月历与独立侧栏。直接新建，也可以先拖选日期。
+const D = RCDates, C = RCColors, K = RCCal;
+const $ = id => document.getElementById(id);
+const BAR_H = 22, FONT = 11;
+const MONTHS = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
+
+const App = { state: null, view: null, hoverId: null, selectedId: null, newMode: false, sel: null };
+const cal = $('cal'), calwrap = $('calwrap');
+let reminderIndex = 0, remindersExpanded = false;
+let reminderAnimations = [];
+
+// —— 提示：浮现后自动消失 ——
+let toastTimer = null;
+function toast(msg, bad) {
+  const el = $('toast');
+  el.textContent = msg;
+  el.classList.toggle('bad', !!bad);
+  el.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.hidden = true; }, 2000);
+}
+// 不经过填写弹窗的操作：成功或失败都提示一下；失败时数据没变，界面自然保持原状态
+function report(res, okMsg) {
+  if (res && res.ok) toast(okMsg);
+  else toast('保存失败，已恢复原来的状态', true);
+}
+
+// 新建中 / 有弹窗 / 在设置页 / 输入框有焦点时，告诉主进程别自动收起
+function refreshBlock() {
+  const el = document.activeElement;
+  const typing = !!el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
+  rc.setBlock(App.newMode || TaskDialog.isOpen() || Settings.isOpen() || typing);
+}
+document.addEventListener('focusin', refreshBlock);
+document.addEventListener('focusout', () => setTimeout(refreshBlock, 0));
+
+function render() {
+  const s = App.state;
+  if (!s) return;
+  if (!App.view) { const t = D.parse(s.today); App.view = { y: t.getFullYear(), m: t.getMonth() }; }
+  const { y, m } = App.view;
+  $('title').innerHTML = `${m + 1}<span class="month-unit">月</span>`;
+  $('monthKicker').textContent = `${y} / ${MONTHS[m]}`;
+  cal.innerHTML = K.monthHTML({ year: y, month: m, tasks: s.tasks, today: s.today, barH: BAR_H, fontSize: FONT });
+  cal.querySelectorAll('.cal-dc').forEach(cell => {
+    cell.innerHTML = `<span class="date-number">${cell.textContent}</span>`;
+    if (cell.dataset.date === s.today) cell.setAttribute('aria-current', 'date');
+  });
+  const byId = new Map(s.tasks.map(t => [t.id, t]));
+  cal.querySelectorAll('.cal-bar').forEach(bar => {
+    const t = byId.get(bar.dataset.id);
+    bar.classList.toggle('is-pinned', t.pinned);
+    bar.tabIndex = 0;
+    bar.setAttribute('role', 'button');
+    bar.setAttribute('aria-label', `${t.title}，${D.rangeText(t.startDate, t.endDate)}${t.done ? '，已完成' : ''}`);
+  });
+  const first = D.toStr(new Date(y, m, 1)), last = D.toStr(new Date(y, m + 1, 0));
+  const monthTasks = s.tasks.filter(t => t.endDate >= first && t.startDate <= last);
+  $('monthCount').innerHTML = `本月 <strong>${monthTasks.length}</strong> 项日程`;
+  $('empty').hidden = monthTasks.length > 0;
+  if (App.selectedId && !s.tasks.some(t => t.id === App.selectedId)) App.selectedId = null;
+  K.markBars(cal, 'sel', App.selectedId);
+  K.markBars(cal, 'hot', App.selectedId ? null : App.hoverId);
+  renderDetail();
+  renderReminders();
+  if (App.sel) drawPreview();
+}
+
+// 详情：悬停时临时预览；点选后一直显示到取消选中，并出现操作按钮
+function renderDetail() {
+  const s = App.state, id = App.selectedId || App.hoverId;
+  const t = id && s.tasks.find(x => x.id === id);
+  const box = $('detail');
+  const actions = $('detailActions');
+  actions.hidden = !t || App.selectedId !== t.id;
+  actions.innerHTML = '';
+  $('detailSection').hidden = !t;
+  if (!t) { box.hidden = true; box.innerHTML = ''; return; }
+  $('detailLabel').textContent = App.selectedId ? '日程详情' : '日程预览';
+  $('clearSelectionBtn').hidden = !App.selectedId;
+  box.innerHTML = K.detailHTML(t, s.today);
+  if (t.pinned) box.querySelector('.dt-title').insertAdjacentHTML('beforeend', '<span class="dt-pin">置顶</span>');
+  if (App.selectedId === t.id) {
+    actions.innerHTML = '<button type="button" data-act="edit">编辑</button>'
+      + `<button type="button" data-act="done">${t.done ? '取消完成' : '完成'}</button>`
+      + `<button type="button" data-act="pin">${t.pinned ? '取消置顶' : '置顶'}</button>`
+      + '<button type="button" data-act="delete" class="danger">删除</button>';
+  }
+  box.hidden = false;
+}
+
+$('detailActions').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-act]');
+  const t = b && App.state.tasks.find(x => x.id === App.selectedId);
+  if (!t) return;
+  const act = b.dataset.act;
+  if (act === 'edit') TaskDialog.open({ mode: 'edit', task: t });
+  else if (act === 'delete') TaskDialog.confirmDelete(t);
+  else if (act === 'done') report(await rc.updateTask(t.id, { done: !t.done }), t.done ? '已取消完成' : '已标记完成');
+  else if (act === 'pin') report(await rc.updateTask(t.id, { pinned: !t.pinned }), t.pinned ? '已取消置顶' : '已置顶');
+});
+
+// 提醒栏：列出还没确认的提醒，逐条点「知道了」
+function layoutReminders(animate = false) {
+  const section = $('reminderSection'), box = $('reminders');
+  const cards = [...box.querySelectorAll('.rm-item')];
+  const moving = animate && cards.length && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // 从当前画面接着运动，快速反复点击时也不会跳回动画起点。
+  const oldHeight = section.getBoundingClientRect().height;
+  const before = moving ? cards.map(card => ({
+    rect: card.getBoundingClientRect(), opacity: getComputedStyle(card).opacity
+  })) : [];
+  reminderAnimations.forEach(animation => animation.cancel());
+  reminderAnimations = [];
+  section.classList.remove('is-animating');
+  section.classList.toggle('expanded', remindersExpanded);
+  cards.forEach((card, index) => {
+    const depth = (index - reminderIndex + cards.length) % cards.length;
+    card.classList.remove('deck-0', 'deck-1', 'deck-2');
+    if (!remindersExpanded && depth <= 2) card.classList.add(`deck-${depth}`);
+    card.inert = !remindersExpanded && depth !== 0;
+  });
+  if (!remindersExpanded) box.scrollTop = 0;
+  if (!moving) return;
+
+  const newHeight = section.getBoundingClientRect().height;
+  const targets = cards.map(card => {
+    const style = getComputedStyle(card);
+    return { rect: card.getBoundingClientRect(), transform: style.transform, opacity: style.opacity };
+  });
+  const timing = { duration: 320, easing: 'cubic-bezier(.22, 1, .36, 1)' };
+  section.classList.add('is-animating');
+  const heightAnimation = section.animate([
+    { height: `${oldHeight}px`, maxHeight: 'none' },
+    { height: `${newHeight}px`, maxHeight: 'none' }
+  ], timing);
+  heightAnimation.onfinish = () => section.classList.remove('is-animating');
+  reminderAnimations.push(heightAnimation);
+  cards.forEach((card, index) => {
+    const from = before[index], to = targets[index];
+    const matrix = new DOMMatrix(to.transform === 'none' ? undefined : to.transform);
+    const x = from.rect.left + from.rect.width / 2 - (to.rect.left + to.rect.width / 2 - matrix.e);
+    const y = from.rect.top - (to.rect.top - matrix.f);
+    const scaleX = from.rect.width / (to.rect.width / matrix.a);
+    const scaleY = from.rect.height / (to.rect.height / matrix.d);
+    reminderAnimations.push(card.animate([
+      { transform: `translate(${x}px, ${y}px) scale(${scaleX}, ${scaleY})`, opacity: from.opacity },
+      { transform: to.transform, opacity: to.opacity }
+    ], timing));
+  });
+}
+
+function renderReminders() {
+  const s = App.state, byId = new Map(s.tasks.map(t => [t.id, t]));
+  const items = s.reminders
+    .filter(r => !r.confirmed && byId.has(r.taskId) && !byId.get(r.taskId).done)
+    .sort((a, b) => (a.day < b.day ? 1 : a.day > b.day ? -1 : 0));
+  const box = $('reminders');
+  box.hidden = !items.length;
+  $('reminderSection').hidden = !items.length;
+  if (!items.length) { remindersExpanded = false; reminderIndex = 0; box.innerHTML = ''; layoutReminders(); return; }
+  reminderIndex = Math.max(0, Math.min(reminderIndex, items.length - 1));
+  box.innerHTML = items.map((r, index) => {
+    const t = byId.get(r.taskId);
+    return `<article class="rm-item" data-index="${index}" data-rid="${K.esc(r.id)}"><i class="rm-dot" style="background:${t.color}"></i>`
+      + `<span class="rm-title">${K.esc(t.title)}</span>`
+      + `<span class="rm-reason">${K.reminderReason(r.kind, t, s.today)}</span>`
+      + `<div class="rm-bottom"><span class="rm-date">${D.rangeText(t.startDate, t.endDate)}</span>`
+      + `<button type="button" class="rm-ok" data-rid="${K.esc(r.id)}" aria-label="确认提醒：${K.esc(t.title)}">知道了</button></div>`
+      + `<span class="reminder-count" aria-label="第 ${index + 1} 条，共 ${items.length} 条提醒">${index + 1} / ${items.length}</span></article>`;
+  }).join('');
+  layoutReminders();
+}
+
+$('reminders').addEventListener('click', async e => {
+  const ok = e.target.closest('.rm-ok');
+  if (ok) {
+    const res = await rc.confirmReminder(ok.dataset.rid);
+    if (res.ok) toast('已确认提醒');
+    else toast('保存失败，这条提醒保持未确认', true);
+    return;
+  }
+  const card = e.target.closest('.rm-item');
+  if (card) {
+    reminderIndex = +card.dataset.index;
+    remindersExpanded = !remindersExpanded;
+    layoutReminders(true);
+  }
+});
+
+$('reminders').addEventListener('wheel', e => {
+  const cards = $('reminders').querySelectorAll('.rm-item');
+  if (remindersExpanded || cards.length < 2 || Math.abs(e.deltaY) < 2) return;
+  e.preventDefault();
+  e.stopPropagation();
+  reminderIndex = (reminderIndex + (e.deltaY > 0 ? 1 : -1) + cards.length) % cards.length;
+  layoutReminders(true);
+}, { passive: false });
+
+function setHover(id) {
+  if (id === App.hoverId) return;
+  App.hoverId = id;
+  K.markBars(cal, 'hot', id);
+  renderDetail();
+}
+
+function select(id) {
+  App.selectedId = id;
+  App.hoverId = null;
+  K.markBars(cal, 'hot', null);
+  K.markBars(cal, 'sel', id);
+  renderDetail();
+}
+
+function shiftMonth(n) {
+  const d = new Date(App.view.y, App.view.m + n, 1);
+  App.view = { y: d.getFullYear(), m: d.getMonth() };
+  App.hoverId = null;
+  App.selectedId = null;
+  clearSelection();
+  render();
+}
+
+function goToday() {
+  const t = D.parse(App.state.today);
+  App.view = { y: t.getFullYear(), m: t.getMonth() };
+  App.hoverId = null;
+  App.selectedId = null;
+  clearSelection();
+  render();
+  const cell = cal.querySelector('.cal-dc.today');
+  if (cell) cell.scrollIntoView({ block: 'nearest' });
+}
+
+// 直接新建默认今天；查看其他月份时默认该月 1 日，日期仍可修改。
+function newTask() {
+  if (TaskDialog.isOpen() || !App.state) return;
+  Settings.close();
+  exitNewMode();
+  select(null);
+  const today = D.parse(App.state.today), { y, m } = App.view;
+  const day = y === today.getFullYear() && m === today.getMonth() ? App.state.today : D.toStr(new Date(y, m, 1));
+  TaskDialog.open({ mode: 'new', start: day, end: day });
+}
+
+// 选日期：保留跨天拖选能力，作为新建的另一种入口。
+function enterNewMode() {
+  if (TaskDialog.isOpen()) return;
+  Settings.close();
+  App.newMode = true;
+  select(null);
+  calwrap.classList.add('newmode');
+  $('newbar').hidden = false;
+  refreshBlock();
+}
+
+function exitNewMode() {
+  App.newMode = false;
+  clearSelection();
+  markHoverDay(null);
+  calwrap.classList.remove('newmode');
+  $('newbar').hidden = true;
+  refreshBlock();
+}
+
+function dayAt(x, y) {
+  const el = document.elementFromPoint(x, y);
+  const week = el && el.closest('.cal-week');
+  if (!week) return null;
+  const r = week.getBoundingClientRect();
+  const col = Math.max(0, Math.min(6, Math.floor((x - r.left) / (r.width / 7))));
+  return D.addDays(week.dataset.start, col);
+}
+
+function markHoverDay(day) {
+  cal.querySelectorAll('.cal-dc.hov').forEach(n => n.classList.remove('hov'));
+  if (day) { const c = cal.querySelector(`.cal-dc[data-date="${day}"]`); if (c) c.classList.add('hov'); }
+}
+
+const ordered = () => (App.sel.a <= App.sel.b ? [App.sel.a, App.sel.b] : [App.sel.b, App.sel.a]);
+
+function drawPreview(e) {
+  cal.querySelectorAll('.cal-preview').forEach(n => n.remove());
+  if (!App.sel) return;
+  const [a, b] = ordered();
+  cal.querySelectorAll('.cal-week').forEach(week => {
+    const ws = week.dataset.start, we = D.addDays(ws, 6);
+    if (b < ws || a > we) return;
+    const i = Math.max(0, D.diff(ws, a)), j = Math.min(6, D.diff(ws, b));
+    const div = document.createElement('div');
+    div.className = 'cal-preview';
+    div.style.cssText = `left:calc(${i * 100 / 7}% + 2px);width:calc(${(j - i + 1) * 100 / 7}% - 4px);top:${week.querySelector('.cal-lanes').offsetTop}px`;
+    week.appendChild(div);
+  });
+  const label = $('daylabel');
+  label.textContent = `${D.diff(a, b) + 1} 天`;
+  if (e) { label.style.left = `${Math.min(e.clientX + 14, innerWidth - 74)}px`; label.style.top = `${Math.min(e.clientY + 12, innerHeight - 32)}px`; }
+  label.hidden = false;
+}
+
+function clearSelection() {
+  App.sel = null;
+  cal.querySelectorAll('.cal-preview').forEach(n => n.remove());
+  $('daylabel').hidden = true;
+}
+
+let press = null;
+calwrap.addEventListener('pointerdown', e => {
+  if (e.button === 2 && App.sel) { clearSelection(); return; }   // 拖选中点右键：取消这次拖选
+  if (e.button !== 0) return;
+  if (App.newMode) {
+    const day = dayAt(e.clientX, e.clientY);
+    if (!day) return;
+    App.sel = { a: day, b: day };
+    calwrap.setPointerCapture(e.pointerId);
+    drawPreview(e);
+    return;
+  }
+  const bar = e.target.closest('.cal-bar');
+  press = { x: e.clientX, y: e.clientY, id: bar ? bar.dataset.id : null };
+});
+
+calwrap.addEventListener('pointermove', e => {
+  if (App.newMode) {
+    const day = dayAt(e.clientX, e.clientY);
+    markHoverDay(day);
+    if (App.sel) { if (day) App.sel.b = day; drawPreview(e); }   // 拖出日历区域：保留最后经过的那一天
+    return;
+  }
+  if (press && (e.buttons & 1)) {
+    if (Math.abs(e.clientX - press.x) + Math.abs(e.clientY - press.y) > 4) press = null;
+    return;
+  }
+  if (!App.selectedId) { const bar = e.target.closest('.cal-bar'); setHover(bar ? bar.dataset.id : null); }
+});
+
+calwrap.addEventListener('pointerup', () => {
+  if (App.newMode) {
+    if (!App.sel) return;
+    const [a, b] = ordered();
+    clearSelection();
+    TaskDialog.open({ mode: 'new', start: a, end: b });
+    return;
+  }
+  if (!press) return;
+  const id = press.id;
+  press = null;
+  select(id);   // 点条选中；点空白取消选中
+});
+
+calwrap.addEventListener('pointerleave', () => {
+  if (!App.selectedId) setHover(null);
+  if (App.newMode && !App.sel) markHoverDay(null);
+});
+calwrap.addEventListener('contextmenu', e => { if (App.sel) { e.preventDefault(); clearSelection(); } });
+calwrap.addEventListener('pointercancel', () => { press = null; clearSelection(); });
+cal.addEventListener('keydown', e => {
+  const bar = e.target.closest('.cal-bar');
+  if (bar && (e.key === 'Enter' || e.key === ' ')) {
+    e.preventDefault();
+    if (!App.newMode) select(bar.dataset.id);
+  }
+});
+
+// —— 顶部栏 ——
+$('prevBtn').addEventListener('click', () => shiftMonth(-1));
+$('nextBtn').addEventListener('click', () => shiftMonth(1));
+$('todayBtn').addEventListener('click', goToday);
+$('newBtn').addEventListener('click', newTask);
+$('emptyNewBtn').addEventListener('click', newTask);
+$('rangeBtn').addEventListener('click', enterNewMode);
+$('cancelRangeBtn').addEventListener('click', exitNewMode);
+$('clearSelectionBtn').addEventListener('click', () => select(null));
+$('settingsBtn').addEventListener('click', () => Settings.open());
+$('closeBtn').addEventListener('click', () => rc.hideW2());
+
+// —— 键盘 ——
+document.addEventListener('keydown', e => {
+  if (TaskDialog.confirmOpen()) return;   // 删除确认框自己处理 Esc
+  if (e.key === 'Escape') {
+    if (TaskDialog.isOpen()) return;        // 填写弹窗里按 Esc 不关闭
+    if (Settings.isOpen()) Settings.close();
+    else if (App.sel) clearSelection();
+    else if (App.newMode) exitNewMode();
+    else if (App.selectedId) select(null);
+    return;
+  }
+  if (TaskDialog.isOpen() || Settings.isOpen()) return;
+  const typing = /^(INPUT|TEXTAREA)$/.test((document.activeElement || {}).tagName);
+  if (e.ctrlKey && e.key.toLowerCase() === 'n') { e.preventDefault(); newTask(); }
+  else if (e.key === 'PageUp') { e.preventDefault(); shiftMonth(-1); }
+  else if (e.key === 'PageDown') { e.preventDefault(); shiftMonth(1); }
+  else if (e.key === 'Delete' && !typing && App.selectedId) {
+    const t = App.state.tasks.find(x => x.id === App.selectedId);
+    if (t) TaskDialog.confirmDelete(t);
+  }
+});
+
+// —— 主进程发来的命令：托盘「新建日程」「设置」，以及用户主动收起时放弃填写 ——
+rc.onCommand(cmd => {
+  if (cmd.type === 'new') newTask();
+  else if (cmd.type === 'settings') Settings.open();
+  else if (cmd.type === 'discard') { TaskDialog.discard(); if (App.newMode) exitNewMode(); }
+});
+
+rc.onState(s => { App.state = s; render(); if (Settings.isOpen()) Settings.render(); });
+rc.getState().then(s => { App.state = s; render(); });
+
+window.W2App = { App, toast, report, refreshBlock, render, select, exitNewMode };
+</script>
+<script>// 新建 / 编辑日程的填写弹窗 + 删除确认框
+// 填写弹窗只能用鼠标点「保存」「取消」：按 Enter 不保存（备注里 Enter 是换行），按 Esc 不关闭
+const TaskDialog = (() => {
+  const modal = $('modal'), confirmEl = $('confirm');
+  const q = id => document.getElementById(id);
+  let ctx = null;          // { mode: 'new' | 'edit', taskId, color }
+  let confirmCtx = null;   // { id }
+
+  const state = () => W2App.App.state;
+
+  function remindSummary(o) {
+    const parts = [];
+    if (o.startBefore.on) parts.push(`开始前 ${o.startBefore.days} 天`);
+    if (o.startDay) parts.push('开始当天');
+    if (o.endBefore.on) parts.push(`结束前 ${o.endBefore.days} 天`);
+    if (o.endDay) parts.push('结束当天');
+    return parts.length ? parts.join('、') : '不提醒';
+  }
+
+  function open({ mode, task, start, end }) {
+    const st = state();
+    const t = task || {
+      title: '', startDate: start, endDate: end, note: '', pinned: false, remind: null,
+      color: st.settings.lastColor || C.PRESETS[0][1],   // 默认用最近一次用过的颜色，第一次用预设第 1 色
+    };
+    ctx = { mode, taskId: task ? task.id : null, color: t.color.toUpperCase() };
+    const g = st.settings.reminder, r = t.remind || g;
+    modal.innerHTML = `
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlgHead">
+        <h3 id="dlgHead">${mode === 'new' ? '新建日程' : '编辑日程'}</h3>
+        <div class="preview-bar" id="dlgPreview"></div>
+        <div class="field"><label for="dlgTitle">标题</label>
+          <input type="text" id="dlgTitle" maxlength="50" value="${K.esc(t.title)}">
+          <div class="err" id="errTitle" hidden></div></div>
+        <div class="row2">
+          <div class="field"><label for="dlgStart">开始日期</label><input type="date" id="dlgStart" value="${t.startDate}"></div>
+          <div class="field"><label for="dlgEnd">结束日期</label><input type="date" id="dlgEnd" value="${t.endDate}"></div>
+        </div>
+        <div class="err" id="errDate" hidden style="margin:-6px 0 10px"></div>
+        <div class="field"><span class="field-label">颜色</span>
+          <div class="swatches" id="dlgPresets"></div>
+          <div id="dlgRecentWrap"><div class="sw-sub">最近使用</div><div class="swatches" id="dlgRecent"></div></div>
+          <div class="custom-color"><input type="color" id="dlgPicker" title="取色器"><input type="text" id="dlgHex" maxlength="7" spellcheck="false"></div>
+        </div>
+        <div class="field"><label for="dlgNote">备注</label><textarea id="dlgNote" maxlength="500">${K.esc(t.note)}</textarea></div>
+        <label class="check"><input type="checkbox" id="dlgPinned" ${t.pinned ? 'checked' : ''}> 置顶（排在其他日程前面）</label>
+        <div class="field" style="margin-top:10px"><span class="field-label">提醒</span>
+          <label class="check"><input type="radio" name="dlgRemind" value="global" ${t.remind ? '' : 'checked'}> 沿用统一设置（${remindSummary(g)}）</label>
+          <label class="check"><input type="radio" name="dlgRemind" value="custom" ${t.remind ? 'checked' : ''}> 这条日程单独设置</label>
+          <div class="remind-grid${t.remind ? '' : ' off'}" id="dlgRemindGrid">
+            <label class="check"><input type="checkbox" id="rSB" ${r.startBefore.on ? 'checked' : ''}> 开始前 <input type="number" id="rSBd" min="1" max="365" value="${r.startBefore.days}"> 天</label>
+            <label class="check"><input type="checkbox" id="rSD" ${r.startDay ? 'checked' : ''}> 开始当天</label>
+            <label class="check"><input type="checkbox" id="rEB" ${r.endBefore.on ? 'checked' : ''}> 结束前 <input type="number" id="rEBd" min="1" max="365" value="${r.endBefore.days}"> 天</label>
+            <label class="check"><input type="checkbox" id="rED" ${r.endDay ? 'checked' : ''}> 结束当天</label>
+          </div>
+        </div>
+        <div class="err" id="errSave" hidden></div>
+        <div class="actions">
+          ${mode === 'edit' ? '<button type="button" class="danger-btn" id="dlgDelete">删除</button>' : ''}
+          <div class="spacer"></div>
+          <button type="button" class="plain-btn" id="dlgCancel">取消</button>
+          <button type="button" class="primary" id="dlgSave">保存</button>
+        </div>
+      </div>`;
+    modal.hidden = false;
+    wire();
+    paintColors();
+    updatePreview();
+    q('dlgTitle').focus();
+    W2App.refreshBlock();
+  }
+
+  function showErr(id, msg) { q(id).textContent = msg; q(id).hidden = false; }
+  function hideErr(id) { q(id).hidden = true; }
+
+  function wire() {
+    q('dlgTitle').addEventListener('input', () => { hideErr('errTitle'); updatePreview(); });
+    q('dlgTitle').addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });   // 标题只有一行，Enter 没有反应
+    ['dlgStart', 'dlgEnd'].forEach(id => q(id).addEventListener('input', () => hideErr('errDate')));
+    q('dlgPicker').addEventListener('input', e => setColor(e.target.value));
+    q('dlgHex').addEventListener('input', e => { const v = e.target.value.trim(); if (C.isHex(v)) setColor(v, true); });
+    modal.querySelectorAll('input[name="dlgRemind"]').forEach(el => el.addEventListener('change', () => {
+      q('dlgRemindGrid').classList.toggle('off', modal.querySelector('input[name="dlgRemind"]:checked').value !== 'custom');
+    }));
+    q('dlgCancel').addEventListener('click', close);
+    q('dlgSave').addEventListener('click', save);
+    const del = q('dlgDelete');
+    if (del) del.addEventListener('click', () => { const t = state().tasks.find(x => x.id === ctx.taskId); if (t) confirmDelete(t); });
+  }
+
+  function paintColors() {
+    const cur = ctx.color;
+    const sw = (hex, title) => `<button type="button" class="swatch${hex.toUpperCase() === cur ? ' on' : ''}" data-c="${hex}" title="${title}" style="background:${hex}"></button>`;
+    q('dlgPresets').innerHTML = C.PRESETS.map(([name, hex]) => sw(hex, name)).join('');
+    const recent = state().settings.recentColors || [];
+    q('dlgRecentWrap').hidden = !recent.length;
+    q('dlgRecent').innerHTML = recent.map(hex => sw(hex, hex)).join('');
+    q('dlgPicker').value = cur.toLowerCase();
+    modal.querySelectorAll('.swatch').forEach(b => { b.onclick = () => setColor(b.dataset.c); });
+  }
+
+  function setColor(hex, fromHex) {
+    ctx.color = hex.toUpperCase();
+    paintColors();
+    if (!fromHex) q('dlgHex').value = ctx.color;
+    updatePreview();
+  }
+
+  // 顶部预览条：用当前标题和颜色实时画出来，直接看到条上文字的效果
+  function updatePreview() {
+    const el = q('dlgPreview');
+    el.textContent = q('dlgTitle').value.trim() || '日程标题';
+    el.style.background = ctx.color;
+    el.style.color = C.barText(ctx.color);
+    if (document.activeElement !== q('dlgHex')) q('dlgHex').value = ctx.color;
+  }
+
+  async function save() {
+    const title = q('dlgTitle').value.trim(), startDate = q('dlgStart').value, endDate = q('dlgEnd').value;
+    let bad = false;
+    if (!title) { showErr('errTitle', '标题不能为空'); bad = true; }
+    if (!D.isValid(startDate) || !D.isValid(endDate)) { showErr('errDate', '请选择开始日期和结束日期'); bad = true; }
+    else if (endDate < startDate) { showErr('errDate', '结束日期不能早于开始日期'); bad = true; }
+    if (bad) return;
+    hideErr('errSave');
+    const custom = modal.querySelector('input[name="dlgRemind"]:checked').value === 'custom';
+    const remind = !custom ? null : {
+      startBefore: { on: q('rSB').checked, days: +q('rSBd').value || 1 }, startDay: q('rSD').checked,
+      endBefore: { on: q('rEB').checked, days: +q('rEBd').value || 1 }, endDay: q('rED').checked,
+    };
+    const data = { title, startDate, endDate, color: ctx.color, note: q('dlgNote').value, pinned: q('dlgPinned').checked, remind };
+    const mode = ctx.mode;
+    q('dlgSave').disabled = true;
+    const res = mode === 'new' ? await rc.createTask(data) : await rc.updateTask(ctx.taskId, data);
+    if (!ctx) return;   // 等结果时弹窗已被放弃
+    q('dlgSave').disabled = false;
+    if (res.ok) {
+      close();
+      if (mode === 'new' && res.id) flash(res.id);
+      else W2App.toast('已保存');
+      return;
+    }
+    // 保存失败：提示并保留弹窗和已填内容，可以再点「保存」
+    const shown = ['标题不能为空', '结束日期不能早于开始日期', '标题最多 50 个字符', '备注最多 500 个字符'];
+    showErr('errSave', shown.includes(res.error) ? res.error : '保存失败，请重试。关闭后本次修改不会保留。');
+  }
+
+  function flash(id) {
+    setTimeout(() => {
+      document.querySelectorAll(`#cal .cal-bar[data-id="${id}"]`).forEach(el => {
+        el.classList.add('flash');
+        setTimeout(() => el.classList.remove('flash'), 700);
+      });
+    }, 60);
+  }
+
+  function close() {
+    const wasNew = ctx && ctx.mode === 'new';
+    ctx = null;
+    modal.hidden = true;
+    modal.innerHTML = '';
+    if (wasNew) W2App.exitNewMode();   // 取消或保存后都退出新建状态
+    W2App.refreshBlock();
+  }
+
+  // 用户主动收起 / 隐藏下拉窗：关掉弹窗，放弃没保存的内容
+  function discard() {
+    closeConfirm();
+    if (ctx) close();
+  }
+
+  function confirmDelete(task) {
+    confirmCtx = { id: task.id };
+    confirmEl.innerHTML = `<div class="confirm-box" role="alertdialog" aria-modal="true">
+        <p>删除日程『${K.esc(task.title)}』？</p>
+        <div class="actions"><div class="spacer"></div>
+          <button type="button" class="plain-btn" id="cfCancel">取消</button>
+          <button type="button" class="danger-btn" id="cfDelete">删除</button>
+        </div></div>`;
+    confirmEl.hidden = false;
+    q('cfCancel').onclick = closeConfirm;
+    q('cfDelete').onclick = async () => {
+      const id = confirmCtx.id;
+      closeConfirm();
+      const res = await rc.deleteTask(id);
+      if (!res.ok) { W2App.toast('保存失败，已恢复原来的状态', true); return; }
+      if (ctx && ctx.taskId === id) close();
+      W2App.toast('已删除');
+    };
+    q('cfCancel').focus();
+    W2App.refreshBlock();
+  }
+
+  function closeConfirm() {
+    confirmCtx = null;
+    confirmEl.hidden = true;
+    confirmEl.innerHTML = '';
+    W2App.refreshBlock();
+  }
+
+  // 删除确认框里按 Esc：等于点「取消」，不删除
+  document.addEventListener('keydown', e => {
+    if (confirmCtx && e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); closeConfirm(); }
+  }, true);
+
+  return {
+    open, close, discard, confirmDelete,
+    isOpen: () => !!ctx || !!confirmCtx,
+    confirmOpen: () => !!confirmCtx,
+  };
+})();
+</script>
+<script>// 设置页：桌面挂件外观（拖动时实时预览，松手后保存并提示）、挂件位置、统一提醒选项、开机自启
+const Settings = (() => {
+  const page = $('settings');
+  const q = id => document.getElementById(id);
+  let isOpenFlag = false;
+
+  // 恢复默认用；和主进程 store.js 里的默认外观保持一致
+  const DEFAULT_AP = { panelColor: '#000000', panelOpacity: 28, blur: 14, textColor: '#FFFFFF', barFontSize: 10, barHeight: 12, width: 420 };
+  const SLIDERS = [
+    ['panelOpacity', '底板不透明度', 0, 100, 1, v => `${v}%`],
+    ['blur', '模糊强度', 0, 40, 1, v => `${v}px`],
+    ['barFontSize', '甘特条字号', 7, 12, 0.5, v => `${v}px`],
+    ['barHeight', '甘特条高度', 6, 18, 1, v => `${v}px`],
+    ['width', '挂件宽度', 320, 600, 10, v => `${v}px`],
+  ];
+  const state = () => W2App.App.state;
+
+  function build() {
+    page.innerHTML = `
+      <div class="page-head"><button type="button" class="ghost" id="stBack">‹ 返回</button><h2>设置</h2></div>
+      <div class="group"><h3>桌面挂件外观</h3>
+        <div class="srow"><label for="st_panelColor">底板颜色</label><input type="color" id="st_panelColor"><span></span></div>
+        ${SLIDERS.map(([k, name, min, max, step]) => `<div class="srow"><label for="st_${k}">${name}</label>`
+          + `<input type="range" id="st_${k}" min="${min}" max="${max}" step="${step}"><output id="st_${k}_out"></output></div>`).join('')}
+        <div class="srow"><label for="st_textColor">字体颜色</label><input type="color" id="st_textColor"><output id="stContrast"></output></div>
+        <div class="warn" id="stContrastWarn" hidden>对比度偏低，小字可能看不清</div>
+        <div class="warn" id="stBarWarn" hidden>条高太小，文字可能被裁切</div>
+        <div class="btn-row"><button type="button" class="plain-btn" id="stReset">恢复默认</button></div>
+      </div>
+      <div class="group"><h3>桌面挂件位置</h3>
+        <div class="hint" id="stW1State"></div>
+        <div class="btn-row"><button type="button" class="plain-btn" id="stPin"></button>
+          <button type="button" class="plain-btn" id="stResetPos">重置位置</button></div>
+      </div>
+      <div class="group"><h3>提醒（统一设置）</h3>
+        <div class="hint">新建日程默认沿用这里的设置，也可以在日程里单独改。只按天提醒，不设具体几点。</div>
+        <div class="remind-grid" style="padding-left:0">
+          <label class="check"><input type="checkbox" id="gSB"> 开始前 <input type="number" id="gSBd" min="1" max="365"> 天</label>
+          <label class="check"><input type="checkbox" id="gSD"> 开始当天</label>
+          <label class="check"><input type="checkbox" id="gEB"> 结束前 <input type="number" id="gEBd" min="1" max="365"> 天</label>
+          <label class="check"><input type="checkbox" id="gED"> 结束当天</label>
+        </div>
+      </div>
+      <div class="group"><h3>通用</h3>
+        <label class="check"><input type="checkbox" id="stAuto"> 开机自启</label>
+        <div class="hint">Demo 里默认关闭；打开后会写入 Windows 的开机启动项。</div>
+      </div>
+      <div class="group"><h3>关于</h3><div class="hint">日程挂件 Demo 0.1.0 · 数据只保存在本机</div></div>`;
+    wire();
+    render();
+  }
+
+  // 从控件读出当前外观（拖动中还没保存的值）
+  function current() {
+    const ap = { panelColor: q('st_panelColor').value.toUpperCase(), textColor: q('st_textColor').value.toUpperCase() };
+    for (const [k] of SLIDERS) ap[k] = +q(`st_${k}`).value;
+    return ap;
+  }
+
+  function updateHints(ap) {
+    for (const [k, , , , , fmt] of SLIDERS) q(`st_${k}_out`).textContent = fmt(ap[k]);
+    const c = C.panelContrast(ap.textColor, ap.panelColor, ap.panelOpacity / 100, state().w1.wallAvg);
+    q('stContrast').textContent = `对比度 ${c.toFixed(1)}`;
+    q('stContrastWarn').hidden = c >= 4.5;
+    q('stBarWarn').hidden = ap.barHeight >= ap.barFontSize + 2;
+  }
+
+  const saveAp = (patch, msg) => rc.saveSettings({ w1: { appearance: patch } }).then(res => W2App.report(res, msg || '已保存'));
+
+  function wire() {
+    q('stBack').addEventListener('click', close);
+    for (const key of ['panelColor', 'textColor', ...SLIDERS.map(s => s[0])]) {
+      const el = q(`st_${key}`);
+      el.addEventListener('input', () => { const ap = current(); updateHints(ap); rc.previewAppearance(ap); });
+      el.addEventListener('change', () => { const ap = current(); saveAp({ [key]: ap[key] }); });   // 松手 / 选完颜色后才保存
+    }
+    q('stReset').addEventListener('click', () => saveAp(DEFAULT_AP, '已恢复默认外观'));
+    q('stPin').addEventListener('click', async () => {
+      const pinned = state().w1.pinned;
+      W2App.report(await rc.setPinned(!pinned), pinned ? '已解锁，可以拖动挂件了' : '已钉住');
+    });
+    q('stResetPos').addEventListener('click', async () => W2App.report(await rc.resetW1(), '已移回主显示器右上角'));
+    for (const id of ['gSB', 'gSBd', 'gSD', 'gEB', 'gEBd', 'gED']) q(id).addEventListener('change', saveReminder);
+    q('stAuto').addEventListener('change', async e => W2App.report(await rc.setAutoStart(e.target.checked), e.target.checked ? '已开启开机自启' : '已关闭开机自启'));
+  }
+
+  async function saveReminder() {
+    const reminder = {
+      startBefore: { on: q('gSB').checked, days: Math.max(1, +q('gSBd').value || 1) }, startDay: q('gSD').checked,
+      endBefore: { on: q('gEB').checked, days: Math.max(1, +q('gEBd').value || 1) }, endDay: q('gED').checked,
+    };
+    W2App.report(await rc.saveSettings({ reminder }), '已保存');
+  }
+
+  // 用最新数据刷新控件（保存成功后主进程会推新数据过来）
+  function render() {
+    if (!isOpenFlag || !page.firstChild) return;
+    const s = state(), ap = s.settings.w1.appearance, w1 = s.w1;
+    q('st_panelColor').value = ap.panelColor.toLowerCase();
+    q('st_textColor').value = ap.textColor.toLowerCase();
+    for (const [k] of SLIDERS) q(`st_${k}`).value = ap[k];
+    updateHints(ap);
+    q('stW1State').textContent = !w1.pinned ? '摆放中：可以拖动桌面挂件，摆好后点「钉住」'
+      : w1.degraded ? '桌面嵌入失败，已切换为置底显示' : '已钉住在桌面上';
+    q('stPin').textContent = w1.pinned ? '解锁桌面挂件' : '钉住桌面挂件';
+    const r = s.settings.reminder;
+    q('gSB').checked = r.startBefore.on; q('gSBd').value = r.startBefore.days; q('gSD').checked = r.startDay;
+    q('gEB').checked = r.endBefore.on; q('gEBd').value = r.endBefore.days; q('gED').checked = r.endDay;
+    q('stAuto').checked = !!s.settings.general.autoStart;
+  }
+
+  function open() {
+    if (isOpenFlag) return;
+    if (W2App.App.newMode) W2App.exitNewMode();
+    isOpenFlag = true;
+    page.hidden = false;
+    build();
+    W2App.refreshBlock();
+  }
+
+  function close() {
+    if (!isOpenFlag) return;
+    isOpenFlag = false;
+    page.hidden = true;
+    page.innerHTML = '';
+    rc.previewAppearance(null);   // 丢掉没保存的预览
+    W2App.refreshBlock();
+  }
+
+  return { open, close, render, isOpen: () => isOpenFlag };
+})();
+</script>
+</body>
+</html>

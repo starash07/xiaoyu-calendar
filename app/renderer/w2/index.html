@@ -2,33 +2,53 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>日程挂件</title>
 <link rel="stylesheet" href="../shared/calendar.css">
 <link rel="stylesheet" href="w2.css">
 </head>
 <body>
 <header class="top">
-  <div class="title" id="title"></div>
-  <div class="nav">
-    <button class="icon" id="prevBtn" type="button" title="上一月（PageUp）">‹</button>
-    <button class="icon" id="nextBtn" type="button" title="下一月（PageDown）">›</button>
-    <button class="ghost" id="todayBtn" type="button">今天</button>
-  </div>
+  <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>日程<span class="brand-note">把日子安排好</span></div>
   <div class="spacer"></div>
-  <button class="primary" id="newBtn" type="button" title="新建日程（Ctrl+N）">新建</button>
-  <button class="ghost" id="settingsBtn" type="button">设置</button>
-  <button class="icon" id="closeBtn" type="button" title="收起">×</button>
+  <button class="ghost settings-button" id="settingsBtn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="16" cy="17" r="3"/></svg>设置</button>
+  <span class="top-divider" aria-hidden="true"></span>
+  <button class="icon" id="closeBtn" type="button" title="收起窗口" aria-label="收起窗口"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M7 17 17 7"/></svg></button>
 </header>
 
-<section class="reminders" id="reminders" hidden></section>
-<div class="newbar" id="newbar" hidden>拖动选择日期，Esc 取消</div>
-
-<main class="calwrap" id="calwrap">
-  <div id="cal"></div>
-  <div class="empty" id="empty" hidden>本月还没有日程，点「新建」添加第一个日程</div>
+<main class="workspace">
+  <section class="calendar-panel" aria-label="月历">
+    <div class="calendar-heading">
+      <div class="month-label"><div class="month-kicker" id="monthKicker"></div><h1 class="title" id="title"></h1></div>
+      <div class="nav" aria-label="切换月份">
+        <button class="icon" id="prevBtn" type="button" title="上一月（PageUp）" aria-label="上一月"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 7-5 5 5 5"/></svg></button>
+        <button class="ghost" id="todayBtn" type="button">今天</button>
+        <button class="icon" id="nextBtn" type="button" title="下一月（PageDown）" aria-label="下一月"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 7 5 5-5 5"/></svg></button>
+      </div>
+    </div>
+    <div class="calendar-toolbar">
+      <div class="month-count" id="monthCount"></div>
+      <div class="create-actions">
+        <button class="ghost range-button" id="rangeBtn" type="button" title="在日历上拖选一段日期"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4m8-4v4M4 10h16m-12 4h3m2 3h3"/></svg><span>选日期</span></button>
+        <button class="primary" id="newBtn" type="button" title="新建日程（Ctrl+N）"><span class="plus" aria-hidden="true">+</span>新建日程</button>
+      </div>
+    </div>
+    <section class="reminder-section" id="reminderSection" hidden aria-label="待确认提醒">
+      <div class="reminders" id="reminders" hidden></div>
+    </section>
+    <div class="newbar" id="newbar" hidden><span>在日历上拖选日期，松开后填写日程</span><button id="cancelRangeBtn" type="button">取消</button></div>
+    <div class="calwrap" id="calwrap">
+      <div id="cal"></div>
+      <div class="empty" id="empty" hidden>这个月还是空白的。<button id="emptyNewBtn" type="button">记下第一件事</button></div>
+    </div>
+    <section class="detail-section" id="detailSection" hidden aria-label="日程详情">
+      <div class="section-heading"><span id="detailLabel">日程详情</span><button class="icon small" id="clearSelectionBtn" type="button" title="取消选中" aria-label="取消选中"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M7 17 17 7"/></svg></button></div>
+      <div class="detail w2detail" id="detail" hidden></div>
+      <div class="dt-actions" id="detailActions" hidden></div>
+    </section>
+    <footer class="calendar-footer"><span><i class="legend-dot"></i>日程<span class="legend-done"><i class="legend-dot"></i>已完成</span></span><span class="calendar-tip">悬停查看 · 点击操作</span></footer>
+  </section>
 </main>
-
-<section class="detail w2detail" id="detail" hidden></section>
 
 <div class="daylabel" id="daylabel" hidden></div>
 <div class="toast" id="toast" hidden></div>

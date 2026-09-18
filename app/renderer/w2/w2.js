@@ -1,10 +1,13 @@
-// W2 下拉窗页面：整月日历（已完成的灰色排在最后）、切换月份、悬停 / 点选详情、新建拖选、提醒栏
+// 主界面：月历与独立侧栏。直接新建，也可以先拖选日期。
 const D = RCDates, C = RCColors, K = RCCal;
 const $ = id => document.getElementById(id);
-const BAR_H = 16, FONT = 11;   // 下拉窗的甘特条先用固定尺寸，不跟桌面挂件的设置走（待确认）
+const BAR_H = 22, FONT = 11;
+const MONTHS = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
 
 const App = { state: null, view: null, hoverId: null, selectedId: null, newMode: false, sel: null };
 const cal = $('cal'), calwrap = $('calwrap');
+let reminderIndex = 0, remindersExpanded = false;
+let reminderAnimations = [];
 
 // —— 提示：浮现后自动消失 ——
 let toastTimer = null;
@@ -36,10 +39,25 @@ function render() {
   if (!s) return;
   if (!App.view) { const t = D.parse(s.today); App.view = { y: t.getFullYear(), m: t.getMonth() }; }
   const { y, m } = App.view;
-  $('title').textContent = `${y} 年 ${m + 1} 月`;
+  $('title').innerHTML = `${m + 1}<span class="month-unit">月</span>`;
+  $('monthKicker').textContent = `${y} / ${MONTHS[m]}`;
   cal.innerHTML = K.monthHTML({ year: y, month: m, tasks: s.tasks, today: s.today, barH: BAR_H, fontSize: FONT });
+  cal.querySelectorAll('.cal-dc').forEach(cell => {
+    cell.innerHTML = `<span class="date-number">${cell.textContent}</span>`;
+    if (cell.dataset.date === s.today) cell.setAttribute('aria-current', 'date');
+  });
+  const byId = new Map(s.tasks.map(t => [t.id, t]));
+  cal.querySelectorAll('.cal-bar').forEach(bar => {
+    const t = byId.get(bar.dataset.id);
+    bar.classList.toggle('is-pinned', t.pinned);
+    bar.tabIndex = 0;
+    bar.setAttribute('role', 'button');
+    bar.setAttribute('aria-label', `${t.title}，${D.rangeText(t.startDate, t.endDate)}${t.done ? '，已完成' : ''}`);
+  });
   const first = D.toStr(new Date(y, m, 1)), last = D.toStr(new Date(y, m + 1, 0));
-  $('empty').hidden = s.tasks.some(t => t.endDate >= first && t.startDate <= last);
+  const monthTasks = s.tasks.filter(t => t.endDate >= first && t.startDate <= last);
+  $('monthCount').innerHTML = `本月 <strong>${monthTasks.length}</strong> 项日程`;
+  $('empty').hidden = monthTasks.length > 0;
   if (App.selectedId && !s.tasks.some(t => t.id === App.selectedId)) App.selectedId = null;
   K.markBars(cal, 'sel', App.selectedId);
   K.markBars(cal, 'hot', App.selectedId ? null : App.hoverId);
@@ -53,22 +71,25 @@ function renderDetail() {
   const s = App.state, id = App.selectedId || App.hoverId;
   const t = id && s.tasks.find(x => x.id === id);
   const box = $('detail');
+  const actions = $('detailActions');
+  actions.hidden = !t || App.selectedId !== t.id;
+  actions.innerHTML = '';
+  $('detailSection').hidden = !t;
   if (!t) { box.hidden = true; box.innerHTML = ''; return; }
+  $('detailLabel').textContent = App.selectedId ? '日程详情' : '日程预览';
+  $('clearSelectionBtn').hidden = !App.selectedId;
   box.innerHTML = K.detailHTML(t, s.today);
   if (t.pinned) box.querySelector('.dt-title').insertAdjacentHTML('beforeend', '<span class="dt-pin">置顶</span>');
   if (App.selectedId === t.id) {
-    box.querySelector('.dt-body').insertAdjacentHTML('beforeend',
-      '<div class="dt-actions">'
-      + '<button type="button" data-act="edit">编辑</button>'
+    actions.innerHTML = '<button type="button" data-act="edit">编辑</button>'
       + `<button type="button" data-act="done">${t.done ? '取消完成' : '完成'}</button>`
       + `<button type="button" data-act="pin">${t.pinned ? '取消置顶' : '置顶'}</button>`
-      + '<button type="button" data-act="delete" class="danger">删除</button>'
-      + '</div>');
+      + '<button type="button" data-act="delete" class="danger">删除</button>';
   }
   box.hidden = false;
 }
 
-$('detail').addEventListener('click', async e => {
+$('detailActions').addEventListener('click', async e => {
   const b = e.target.closest('button[data-act]');
   const t = b && App.state.tasks.find(x => x.id === App.selectedId);
   if (!t) return;
@@ -80,6 +101,55 @@ $('detail').addEventListener('click', async e => {
 });
 
 // 提醒栏：列出还没确认的提醒，逐条点「知道了」
+function layoutReminders(animate = false) {
+  const section = $('reminderSection'), box = $('reminders');
+  const cards = [...box.querySelectorAll('.rm-item')];
+  const moving = animate && cards.length && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // 从当前画面接着运动，快速反复点击时也不会跳回动画起点。
+  const oldHeight = section.getBoundingClientRect().height;
+  const before = moving ? cards.map(card => ({
+    rect: card.getBoundingClientRect(), opacity: getComputedStyle(card).opacity
+  })) : [];
+  reminderAnimations.forEach(animation => animation.cancel());
+  reminderAnimations = [];
+  section.classList.remove('is-animating');
+  section.classList.toggle('expanded', remindersExpanded);
+  cards.forEach((card, index) => {
+    const depth = (index - reminderIndex + cards.length) % cards.length;
+    card.classList.remove('deck-0', 'deck-1', 'deck-2');
+    if (!remindersExpanded && depth <= 2) card.classList.add(`deck-${depth}`);
+    card.inert = !remindersExpanded && depth !== 0;
+  });
+  if (!remindersExpanded) box.scrollTop = 0;
+  if (!moving) return;
+
+  const newHeight = section.getBoundingClientRect().height;
+  const targets = cards.map(card => {
+    const style = getComputedStyle(card);
+    return { rect: card.getBoundingClientRect(), transform: style.transform, opacity: style.opacity };
+  });
+  const timing = { duration: 320, easing: 'cubic-bezier(.22, 1, .36, 1)' };
+  section.classList.add('is-animating');
+  const heightAnimation = section.animate([
+    { height: `${oldHeight}px`, maxHeight: 'none' },
+    { height: `${newHeight}px`, maxHeight: 'none' }
+  ], timing);
+  heightAnimation.onfinish = () => section.classList.remove('is-animating');
+  reminderAnimations.push(heightAnimation);
+  cards.forEach((card, index) => {
+    const from = before[index], to = targets[index];
+    const matrix = new DOMMatrix(to.transform === 'none' ? undefined : to.transform);
+    const x = from.rect.left + from.rect.width / 2 - (to.rect.left + to.rect.width / 2 - matrix.e);
+    const y = from.rect.top - (to.rect.top - matrix.f);
+    const scaleX = from.rect.width / (to.rect.width / matrix.a);
+    const scaleY = from.rect.height / (to.rect.height / matrix.d);
+    reminderAnimations.push(card.animate([
+      { transform: `translate(${x}px, ${y}px) scale(${scaleX}, ${scaleY})`, opacity: from.opacity },
+      { transform: to.transform, opacity: to.opacity }
+    ], timing));
+  });
+}
+
 function renderReminders() {
   const s = App.state, byId = new Map(s.tasks.map(t => [t.id, t]));
   const items = s.reminders
@@ -87,26 +157,45 @@ function renderReminders() {
     .sort((a, b) => (a.day < b.day ? 1 : a.day > b.day ? -1 : 0));
   const box = $('reminders');
   box.hidden = !items.length;
-  box.innerHTML = !items.length ? '' : `<div class="rm-head">待确认提醒 ${items.length} 条</div>` + items.map(r => {
+  $('reminderSection').hidden = !items.length;
+  if (!items.length) { remindersExpanded = false; reminderIndex = 0; box.innerHTML = ''; layoutReminders(); return; }
+  reminderIndex = Math.max(0, Math.min(reminderIndex, items.length - 1));
+  box.innerHTML = items.map((r, index) => {
     const t = byId.get(r.taskId);
-    return `<div class="rm-item"><i class="rm-dot" style="background:${t.color}"></i>`
-      + `<span class="rm-title" data-task="${t.id}" title="在日历里查看">${K.esc(t.title)}</span>`
-      + `<span class="rm-reason">${K.reminderReason(r.kind, t, s.today)} · ${D.rangeText(t.startDate, t.endDate)}</span>`
-      + `<button type="button" class="rm-ok" data-rid="${K.esc(r.id)}">知道了</button></div>`;
+    return `<article class="rm-item" data-index="${index}" data-rid="${K.esc(r.id)}"><i class="rm-dot" style="background:${t.color}"></i>`
+      + `<span class="rm-title">${K.esc(t.title)}</span>`
+      + `<span class="rm-reason">${K.reminderReason(r.kind, t, s.today)}</span>`
+      + `<div class="rm-bottom"><span class="rm-date">${D.rangeText(t.startDate, t.endDate)}</span>`
+      + `<button type="button" class="rm-ok" data-rid="${K.esc(r.id)}" aria-label="确认提醒：${K.esc(t.title)}">知道了</button></div>`
+      + `<span class="reminder-count" aria-label="第 ${index + 1} 条，共 ${items.length} 条提醒">${index + 1} / ${items.length}</span></article>`;
   }).join('');
+  layoutReminders();
 }
 
 $('reminders').addEventListener('click', async e => {
   const ok = e.target.closest('.rm-ok');
   if (ok) {
     const res = await rc.confirmReminder(ok.dataset.rid);
-    if (!res.ok) toast('保存失败，这条提醒保持未确认', true);
+    if (res.ok) toast('已确认提醒');
+    else toast('保存失败，这条提醒保持未确认', true);
     return;
   }
-  const title = e.target.closest('.rm-title');
-  const t = title && App.state.tasks.find(x => x.id === title.dataset.task);
-  if (t) { const d = D.parse(t.startDate); App.view = { y: d.getFullYear(), m: d.getMonth() }; App.selectedId = t.id; render(); }
+  const card = e.target.closest('.rm-item');
+  if (card) {
+    reminderIndex = +card.dataset.index;
+    remindersExpanded = !remindersExpanded;
+    layoutReminders(true);
+  }
 });
+
+$('reminders').addEventListener('wheel', e => {
+  const cards = $('reminders').querySelectorAll('.rm-item');
+  if (remindersExpanded || cards.length < 2 || Math.abs(e.deltaY) < 2) return;
+  e.preventDefault();
+  e.stopPropagation();
+  reminderIndex = (reminderIndex + (e.deltaY > 0 ? 1 : -1) + cards.length) % cards.length;
+  layoutReminders(true);
+}, { passive: false });
 
 function setHover(id) {
   if (id === App.hoverId) return;
@@ -127,18 +216,34 @@ function shiftMonth(n) {
   const d = new Date(App.view.y, App.view.m + n, 1);
   App.view = { y: d.getFullYear(), m: d.getMonth() };
   App.hoverId = null;
+  App.selectedId = null;
+  clearSelection();
   render();
 }
 
 function goToday() {
   const t = D.parse(App.state.today);
   App.view = { y: t.getFullYear(), m: t.getMonth() };
+  App.hoverId = null;
+  App.selectedId = null;
+  clearSelection();
   render();
   const cell = cal.querySelector('.cal-dc.today');
   if (cell) cell.scrollIntoView({ block: 'nearest' });
 }
 
-// —— 新建：先点「新建」，再在日历上拖出日期范围，松手弹出填写窗口 ——
+// 直接新建默认今天；查看其他月份时默认该月 1 日，日期仍可修改。
+function newTask() {
+  if (TaskDialog.isOpen() || !App.state) return;
+  Settings.close();
+  exitNewMode();
+  select(null);
+  const today = D.parse(App.state.today), { y, m } = App.view;
+  const day = y === today.getFullYear() && m === today.getMonth() ? App.state.today : D.toStr(new Date(y, m, 1));
+  TaskDialog.open({ mode: 'new', start: day, end: day });
+}
+
+// 选日期：保留跨天拖选能力，作为新建的另一种入口。
 function enterNewMode() {
   if (TaskDialog.isOpen()) return;
   Settings.close();
@@ -184,12 +289,12 @@ function drawPreview(e) {
     const i = Math.max(0, D.diff(ws, a)), j = Math.min(6, D.diff(ws, b));
     const div = document.createElement('div');
     div.className = 'cal-preview';
-    div.style.cssText = `left:calc(${i * 100 / 7}% + 2px);width:calc(${(j - i + 1) * 100 / 7}% - 4px);top:${week.querySelector('.cal-dates').offsetHeight + 3}px`;
+    div.style.cssText = `left:calc(${i * 100 / 7}% + 2px);width:calc(${(j - i + 1) * 100 / 7}% - 4px);top:${week.querySelector('.cal-lanes').offsetTop}px`;
     week.appendChild(div);
   });
   const label = $('daylabel');
   label.textContent = `${D.diff(a, b) + 1} 天`;
-  if (e) { label.style.left = `${e.clientX + 14}px`; label.style.top = `${e.clientY + 12}px`; }
+  if (e) { label.style.left = `${Math.min(e.clientX + 14, innerWidth - 74)}px`; label.style.top = `${Math.min(e.clientY + 12, innerHeight - 32)}px`; }
   label.hidden = false;
 }
 
@@ -199,7 +304,7 @@ function clearSelection() {
   $('daylabel').hidden = true;
 }
 
-let press = null;   // 普通状态下按下的位置：移动超过 4px 算拖窗口，否则算点击
+let press = null;
 calwrap.addEventListener('pointerdown', e => {
   if (e.button === 2 && App.sel) { clearSelection(); return; }   // 拖选中点右键：取消这次拖选
   if (e.button !== 0) return;
@@ -223,7 +328,7 @@ calwrap.addEventListener('pointermove', e => {
     return;
   }
   if (press && (e.buttons & 1)) {
-    if (Math.abs(e.clientX - press.x) + Math.abs(e.clientY - press.y) > 4) { press = null; rc.w2Drag(); }
+    if (Math.abs(e.clientX - press.x) + Math.abs(e.clientY - press.y) > 4) press = null;
     return;
   }
   if (!App.selectedId) { const bar = e.target.closest('.cal-bar'); setHover(bar ? bar.dataset.id : null); }
@@ -248,12 +353,24 @@ calwrap.addEventListener('pointerleave', () => {
   if (App.newMode && !App.sel) markHoverDay(null);
 });
 calwrap.addEventListener('contextmenu', e => { if (App.sel) { e.preventDefault(); clearSelection(); } });
+calwrap.addEventListener('pointercancel', () => { press = null; clearSelection(); });
+cal.addEventListener('keydown', e => {
+  const bar = e.target.closest('.cal-bar');
+  if (bar && (e.key === 'Enter' || e.key === ' ')) {
+    e.preventDefault();
+    if (!App.newMode) select(bar.dataset.id);
+  }
+});
 
 // —— 顶部栏 ——
 $('prevBtn').addEventListener('click', () => shiftMonth(-1));
 $('nextBtn').addEventListener('click', () => shiftMonth(1));
 $('todayBtn').addEventListener('click', goToday);
-$('newBtn').addEventListener('click', enterNewMode);
+$('newBtn').addEventListener('click', newTask);
+$('emptyNewBtn').addEventListener('click', newTask);
+$('rangeBtn').addEventListener('click', enterNewMode);
+$('cancelRangeBtn').addEventListener('click', exitNewMode);
+$('clearSelectionBtn').addEventListener('click', () => select(null));
 $('settingsBtn').addEventListener('click', () => Settings.open());
 $('closeBtn').addEventListener('click', () => rc.hideW2());
 
@@ -270,7 +387,7 @@ document.addEventListener('keydown', e => {
   }
   if (TaskDialog.isOpen() || Settings.isOpen()) return;
   const typing = /^(INPUT|TEXTAREA)$/.test((document.activeElement || {}).tagName);
-  if (e.ctrlKey && e.key.toLowerCase() === 'n') { e.preventDefault(); enterNewMode(); }
+  if (e.ctrlKey && e.key.toLowerCase() === 'n') { e.preventDefault(); newTask(); }
   else if (e.key === 'PageUp') { e.preventDefault(); shiftMonth(-1); }
   else if (e.key === 'PageDown') { e.preventDefault(); shiftMonth(1); }
   else if (e.key === 'Delete' && !typing && App.selectedId) {
@@ -281,7 +398,7 @@ document.addEventListener('keydown', e => {
 
 // —— 主进程发来的命令：托盘「新建日程」「设置」，以及用户主动收起时放弃填写 ——
 rc.onCommand(cmd => {
-  if (cmd.type === 'new') enterNewMode();
+  if (cmd.type === 'new') newTask();
   else if (cmd.type === 'settings') Settings.open();
   else if (cmd.type === 'discard') { TaskDialog.discard(); if (App.newMode) exitNewMode(); }
 });
