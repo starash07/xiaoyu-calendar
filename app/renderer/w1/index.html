@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>日程挂件 · 桌面</title>
+<link rel="stylesheet" href="../shared/calendar.css">
+<link rel="stylesheet" href="w1.css">
+</head>
+<body>
+<div id="panel" class="panel">
+  <div class="bg" id="bg"></div>
+  <div class="tint" id="tint"></div>
+  <div class="content">
+    <div class="loose-bar"><span>拖动摆放位置</span><button id="pinBtn" type="button">钉住</button></div>
+    <div class="head"><span id="title"></span><span class="flag" id="flag" hidden></span></div>
+    <div id="cal"></div>
+    <div class="detail" id="detail" hidden></div>
+  </div>
+  <div class="flag-tip" id="flagTip" hidden>有待确认提醒，请到主窗口查看</div>
+</div>
+<script src="../shared/dates.js"></script>
+<script src="../shared/colors.js"></script>
+<script src="../shared/calendar.js"></script>
+<script src="w1.js"></script>
+</body>
+</html>

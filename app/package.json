@@ -1,0 +1,19 @@
+{
+  "name": "richeng-guajian",
+  "productName": "日程挂件",
+  "version": "0.1.0",
+  "private": true,
+  "description": "桌面日程挂件 Demo：W1 桌面挂件 + W2 下拉窗",
+  "main": "main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "selftest": "electron . --selftest",
+    "postinstall": "node node_modules/electron/install.js"
+  },
+  "devDependencies": {
+    "electron": "^44.4.2"
+  },
+  "dependencies": {
+    "koffi": "^2.16.3"
+  }
+}

@@ -1,0 +1,20 @@
+/* 日历与甘特条的公共样式；颜色由各窗口通过 --fg / --fg2 / --fg3 / --hl / --rule / --done-* 提供 */
+[hidden] { display: none !important; }
+.cal-wd { display: grid; grid-template-columns: repeat(7, 1fr); font-size: 11px; color: var(--fg3); padding-bottom: 4px; }
+.cal-wd span { padding-left: 3px; }
+.cal-week { margin-bottom: 6px; }
+.cal-dates { display: grid; grid-template-columns: repeat(7, 1fr); font-size: 11px; line-height: 15px; color: var(--fg2); }
+.cal-dc { padding: 0 3px; }
+.cal-dc.out { color: var(--fg3); }
+.cal-dc.today { color: var(--hl); font-weight: 700; }
+.cal-lanes { position: relative; margin-top: 3px; }
+.cal-bar { position: absolute; box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-bar.done { background: var(--done-bg); color: var(--done-fg); }
+.cal-bar.hot, .cal-bar.sel { box-shadow: 0 0 0 1.5px var(--hl); z-index: 1; }
+
+.detail { display: flex; gap: 9px; border-top: 1px solid var(--rule); margin-top: 10px; padding: 10px 3px 0; }
+.dt-bar { width: 3px; border-radius: 2px; flex-shrink: 0; }
+.dt-body { min-width: 0; flex: 1; }
+.dt-title { font-size: 12px; color: var(--fg); margin-bottom: 3px; word-break: break-word; }
+.dt-meta { font-size: 11px; line-height: 1.6; color: var(--fg2); }
+.dt-note { font-size: 11px; line-height: 1.6; color: var(--fg2); white-space: pre-wrap; word-break: break-word; margin-top: 2px; }

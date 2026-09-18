@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>日程挂件</title>
+<link rel="stylesheet" href="../shared/calendar.css">
+<link rel="stylesheet" href="w2.css">
+</head>
+<body>
+<header class="top">
+  <div class="title" id="title"></div>
+  <div class="nav">
+    <button class="icon" id="prevBtn" type="button" title="上一月（PageUp）">‹</button>
+    <button class="icon" id="nextBtn" type="button" title="下一月（PageDown）">›</button>
+    <button class="ghost" id="todayBtn" type="button">今天</button>
+  </div>
+  <div class="spacer"></div>
+  <button class="primary" id="newBtn" type="button" title="新建日程（Ctrl+N）">新建</button>
+  <button class="ghost" id="settingsBtn" type="button">设置</button>
+  <button class="icon" id="closeBtn" type="button" title="收起">×</button>
+</header>
+
+<section class="reminders" id="reminders" hidden></section>
+<div class="newbar" id="newbar" hidden>拖动选择日期，Esc 取消</div>
+
+<main class="calwrap" id="calwrap">
+  <div id="cal"></div>
+  <div class="empty" id="empty" hidden>本月还没有日程，点「新建」添加第一个日程</div>
+</main>
+
+<section class="detail w2detail" id="detail" hidden></section>
+
+<div class="daylabel" id="daylabel" hidden></div>
+<div class="toast" id="toast" hidden></div>
+<div class="overlay" id="modal" hidden></div>
+<div class="overlay" id="confirm" hidden></div>
+<div class="page" id="settings" hidden></div>
+
+<script src="../shared/dates.js"></script>
+<script src="../shared/colors.js"></script>
+<script src="../shared/calendar.js"></script>
+<script src="w2.js"></script>
+<script src="dialog.js"></script>
+<script src="settings.js"></script>
+</body>
+</html>

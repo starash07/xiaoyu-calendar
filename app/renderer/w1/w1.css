@@ -1,0 +1,21 @@
+html, body { margin: 0; background: transparent; overflow: hidden; }
+body { padding: 8px; font-family: "Microsoft YaHei UI", "Microsoft YaHei", sans-serif; user-select: none; cursor: default; }
+
+/* 玻璃底板：底下垫一层模糊过的壁纸，上面再盖一层半透明底色 */
+.panel { position: relative; width: var(--w, 420px); box-sizing: border-box; border-radius: 14px; overflow: hidden; border: 1px solid var(--edge); color: var(--fg); }
+.panel.loose { outline: 1.5px dashed var(--fg2); outline-offset: 3px; cursor: move; }
+.bg { position: absolute; inset: -40px; background-repeat: no-repeat; filter: blur(var(--blur, 14px)); }
+.tint { position: absolute; inset: 0; }
+.content { position: relative; padding: 14px 12px 12px; }
+
+/* 摆放中的提示条 */
+.loose-bar { display: none; align-items: center; justify-content: space-between; gap: 8px; margin: -4px -2px 10px; padding: 5px 6px 5px 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.5); color: #fff; font-size: 12px; }
+.panel.loose .loose-bar { display: flex; }
+.loose-bar button { font: inherit; font-size: 12px; border: 0; border-radius: 6px; padding: 3px 14px; background: #5DCAA5; color: #04342C; cursor: pointer; }
+.loose-bar button:hover { background: #7ad6b8; }
+
+.head { display: flex; align-items: center; justify-content: space-between; font-size: 14px; padding-left: 3px; margin-bottom: 10px; }
+
+/* 提醒标志：只提示，不能点 */
+.flag { min-width: 16px; height: 16px; padding: 0 5px; box-sizing: border-box; border-radius: 8px; background: #F0997B; color: #4A1B0C; font-size: 10px; line-height: 16px; text-align: center; }
+.flag-tip { position: absolute; right: 12px; top: 38px; z-index: 5; padding: 5px 9px; border-radius: 6px; background: rgba(0, 0, 0, 0.75); color: #fff; font-size: 11px; white-space: nowrap; pointer-events: none; }
