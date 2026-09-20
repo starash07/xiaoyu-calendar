@@ -78,53 +78,56 @@
     .content {
       flex: 1;
       min-height: 0;
+      display: flex;
+      flex-direction: column;
       overflow-y: auto;
       overflow-x: hidden;
-      padding: 14px 16px 16px;
+      padding: 14px 16px 4px;
       scrollbar-width: thin;
       scrollbar-color: #cbdce5 transparent;
     }
     .content::-webkit-scrollbar { width: 5px; }
     .content::-webkit-scrollbar-thumb { border-radius: 4px; background: #cbdce5; }
 
-    /* 顶部只有提醒卡片本身，没有提醒栏外壳。 */
-    .reminder-deck { position: relative; height: 56px; margin: 0 2px 11px; }
+    /* 提醒：浅杏底卡片，文字左对齐，不用整条重色；下层卡片露出边缘，右上角标数量。 */
+    .reminder-head { display: flex; align-items: baseline; justify-content: space-between; margin: 0 4px 5px; color: #9a8270; font-size: 9px; }
+    .reminder-head b { color: #7c5c46; font-size: 10px; font-weight: 600; }
+    .reminder-deck { flex: 0 0 auto; position: relative; height: 66px; margin: 0 2px 12px; }
     .reminder-card {
       position: absolute;
-      inset: 0;
+      inset: 0 0 auto;
       z-index: 3;
-      min-height: 46px;
+      min-height: 48px;
       display: grid;
-      grid-template-columns: 6px minmax(0, 1fr) auto;
-      grid-template-rows: 16px 16px;
-      gap: 0 8px;
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-rows: 17px 16px;
+      gap: 0 10px;
       align-items: center;
-      padding: 7px 10px;
-      border: 0;
+      padding: 7px 10px 7px 12px;
+      border: 1px solid #f2e2d2;
       border-radius: 12px;
-      background: var(--coral);
+      background: #fff5ec;
+      text-align: left;
       transform-origin: top center;
       transition: transform .25s cubic-bezier(.22, 1, .36, 1), opacity .2s ease;
     }
-    .reminder-card:nth-child(2) { z-index: 2; opacity: .32; transform: translateY(5px) scale(.982); }
-    .reminder-card:nth-child(3) { z-index: 1; opacity: .14; transform: translateY(10px) scale(.962); }
+    .reminder-card:nth-child(2) { z-index: 2; opacity: .62; transform: translateY(8px) scale(.985); }
+    .reminder-card:nth-child(3) { z-index: 1; opacity: .34; transform: translateY(15px) scale(.97); }
     .reminder-card:nth-child(n+2) > * { opacity: 0; }
-    .reminder-dot { width: 6px; height: 6px; border-radius: 50%; grid-row: 1 / 3; background: rgba(255,255,255,.86) !important; }
-    .reminder-title { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: #fff; font-size: 11px; line-height: 16px; font-weight: 600; text-align: center; }
-    .reminder-reason { align-self: end; color: rgba(255,255,255,.8); font-size: 9px; line-height: 17px; text-align: center; }
-    .reminder-ok { grid-column: 3; grid-row: 1 / 3; align-self: center; min-height: 22px; padding: 0 8px; border: 0; border-radius: 7px; background: rgba(255,255,255,.9); color: #aa555a; font-size: 9px; line-height: 22px; }
+    .reminder-title { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: #7c5c46; font-size: 11px; line-height: 17px; font-weight: 600; text-align: left; }
+    .reminder-reason { align-self: start; color: #806451; font-size: 9px; line-height: 16px; text-align: left; }
+    .reminder-ok { grid-column: 2; grid-row: 1 / 3; align-self: center; min-height: 23px; padding: 0 9px; border: 1px solid #efdcc8; border-radius: 7px; background: #fff; color: #a0603f; font-size: 9px; line-height: 21px; }
+    .reminder-ok:hover { background: #fff0e2; }
     .reminder-deck.expanded { height: auto; display: grid; gap: 7px; }
-    .reminder-deck.expanded .reminder-card { position: relative; opacity: 1; transform: none; min-height: 46px; }
+    .reminder-deck.expanded .reminder-card { position: relative; opacity: 1; transform: none; }
     .reminder-deck.expanded .reminder-card > * { opacity: 1; }
-    .reminder-deck.expanded .reminder-count { display: none; }
 
-    /* 月历固定 6:5，由宽度决定高度，不随窗口剩余空间拉伸。 */
+    /* 月历高度随当月周数和每周条数变化，并吃掉窗口剩下的空间。 */
     .calendar-card {
       width: 100%;
-      aspect-ratio: 6 / 5;
+      flex: 1 0 auto;
       display: flex;
       flex-direction: column;
-      overflow: hidden;
       padding: 11px 10px 9px;
       border-radius: 14px;
       background: #f7fafb;
@@ -140,8 +143,9 @@
       text-align: center;
     }
     .weekdays span:nth-child(n+6) { color: #d88389; }
-    .month-grid { flex: 1; min-height: 0; display: grid; grid-template-rows: repeat(6, 1fr); }
-    .week { position: relative; min-height: 0; border-top: 1px solid var(--line); }
+    .month-grid { flex: 1 0 auto; display: flex; flex-direction: column; }
+    /* 行高随当周实际条数变化：没有日程的那一周只有日期行 */
+    .week { flex: 1 0 auto; position: relative; border-top: 1px solid var(--line); padding-bottom: 7px; }
     .dates { height: 27px; display: grid; grid-template-columns: repeat(7, 1fr); align-items: center; }
     .day {
       display: flex;
@@ -154,11 +158,13 @@
     .day.weekend { color: #dc7c83; }
     .day.out { color: #bbc7ce; }
     .day.today span { width: 27px; height: 27px; display: grid; place-items: center; border-radius: 50%; background: var(--coral); color: #fff; font-weight: 600; }
-    .event-layer { position: absolute; inset: 29px 0 auto; height: 20px; pointer-events: none; }
+    .event-layer { position: relative; height: calc(var(--lanes, 1) * 23px); pointer-events: none; }
     .event {
       --start: 0;
       --span: 1;
+      --lane: 0;
       position: absolute;
+      top: calc(var(--lane) * 23px);
       left: calc(var(--start) * 100% / 7 + 2px);
       width: calc(var(--span) * 100% / 7 - 4px);
       height: 19px;
@@ -178,9 +184,11 @@
     }
     .event:hover, .event.hot { filter: brightness(.98) saturate(1.08); transform: translateY(-1px); }
     .event.locked::before { content: "◆"; margin-right: 4px; font-size: 7px; }
+    /* 已完成：灰显，排在未完成的下面 */
+    .event.done { --event-color: #e7ecee; color: #8b98a1; }
 
-    .detail-slot { max-height: 0; margin-top: 0; overflow: hidden; opacity: 0; transition: max-height .24s cubic-bezier(.22, 1, .36, 1), margin .24s ease, opacity .16s ease; }
-    .detail-slot.show { max-height: 94px; margin-top: 10px; opacity: 1; }
+    .detail-slot { flex: 0 0 auto; max-height: 0; margin-top: 0; overflow: hidden; opacity: 0; transition: max-height .24s cubic-bezier(.22, 1, .36, 1), margin .24s ease, opacity .16s ease; }
+    .detail-slot.show { max-height: 168px; margin-top: 10px; opacity: 1; }
     .detail-card {
       min-height: 78px;
       display: grid;
@@ -196,9 +204,15 @@
     .detail-meta { color: #6f8b94; font-size: 10px; }
     .detail-note { color: #56727c; font-size: 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
     .detail-lock { grid-column: 3; grid-row: 1 / 3; padding: 2px 7px; border: 0; border-radius: 7px; background: rgba(255,255,255,.75); color: #65848b; font-size: 9px; }
+    /* 选中后才出现的操作按钮 */
+    .detail-actions { grid-column: 2 / 4; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .detail-actions button { min-height: 25px; padding: 0 11px; border: 1px solid #d5e5e0; border-radius: 8px; background: rgba(255,255,255,.8); color: #4a7b74; font-size: 10px; }
+    .detail-actions button:hover { background: #fff; }
+    .detail-actions .danger { border-color: #eed7d7; color: #b56464; }
 
     /* 月份和操作全部在月历下方。 */
-    .bottom-bento { height: 88px; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(118px, .8fr); gap: 10px; margin-top: 10px; }
+    /* 固定在窗口底部，不跟着内容滚动：日程多的时候也能直接点「新建日程」 */
+    .bottom-bento { flex: 0 0 auto; height: 88px; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(118px, .8fr); gap: 10px; margin: 8px 16px 16px; }
     .month-tile {
       position: relative;
       display: grid;
@@ -224,6 +238,7 @@
     @media (max-width: 420px) {
       .app { border-radius: 12px; }
       .content { padding-left: 12px; padding-right: 12px; }
+      .bottom-bento { margin-left: 12px; margin-right: 12px; }
       .prototype { display: none; }
       .day { font-size: 13px; }
       .calendar-card { padding-left: 7px; padding-right: 7px; }
@@ -249,21 +264,19 @@
     </header>
 
     <div class="content">
+      <div class="reminder-head" id="reminderHead"><b>待确认提醒 3 条</b><span>滚轮切换 · 点击展开</span></div>
       <section class="reminder-deck" id="reminderDeck" aria-label="待确认提醒">
         <article class="reminder-card" tabindex="0">
-          <i class="reminder-dot" style="background:#74badd"></i>
           <div class="reminder-title">新界面设计</div>
           <div class="reminder-reason">2 天后截止</div>
           <button class="reminder-ok" type="button">知道了</button>
         </article>
         <article class="reminder-card" tabindex="0">
-          <i class="reminder-dot" style="background:#a7d8c5"></i>
           <div class="reminder-title">完成本月复盘</div>
           <div class="reminder-reason">6 天后开始</div>
           <button class="reminder-ok" type="button">知道了</button>
         </article>
         <article class="reminder-card" tabindex="0">
-          <i class="reminder-dot" style="background:#f1cc76"></i>
           <div class="reminder-title">周末出游</div>
           <div class="reminder-reason">明天开始</div>
           <button class="reminder-ok" type="button">知道了</button>
@@ -275,25 +288,22 @@
         <div class="month-grid">
           <div class="week">
             <div class="dates"><div class="day out">31</div><div class="day">1</div><div class="day">2</div><div class="day">3</div><div class="day">4</div><div class="day weekend">5</div><div class="day weekend">6</div></div>
-            <div class="event-layer"><button class="event" style="--start:3;--span:4;--event-color:#c8c2e9" data-title="阅读 · 一本新书" data-date="9月3日—9月6日" data-note="晚上读半小时，周末整理摘录。" data-color="#aaa2dc">阅读 · 一本新书</button></div>
+            <div class="event-layer" style="--lanes:2"><button class="event" style="--start:3;--span:4;--lane:0;--event-color:#c8c2e9" data-title="阅读 · 一本新书" data-date="9月3日—9月6日" data-note="晚上读半小时，周末整理摘录。" data-color="#aaa2dc">阅读 · 一本新书</button><button class="event done" style="--start:1;--span:2;--lane:1" data-title="提交周报" data-date="9月1日—9月2日" data-note="已完成的日程灰显，排在未完成的下面。" data-color="#c3ccd2">提交周报</button></div>
           </div>
           <div class="week">
             <div class="dates"><div class="day">7</div><div class="day">8</div><div class="day">9</div><div class="day">10</div><div class="day">11</div><div class="day weekend">12</div><div class="day weekend">13</div></div>
-            <div class="event-layer"><button class="event" style="--start:0;--span:4;--event-color:#a8d9c5" data-title="项目方案整理" data-date="9月7日—9月10日" data-note="把需求、交互和剩余问题整理成一份清单。" data-color="#73bfa1">项目方案整理</button><button class="event" style="--start:5;--span:2;--event-color:#f6c9ad" data-title="和朋友吃饭" data-date="9月12日" data-note="晚餐，出发前确认餐厅。" data-color="#efad81">和朋友吃饭</button></div>
+            <div class="event-layer" style="--lanes:1"><button class="event" style="--start:0;--span:4;--lane:0;--event-color:#a8d9c5" data-title="项目方案整理" data-date="9月7日—9月10日" data-note="把需求、交互和剩余问题整理成一份清单。" data-color="#73bfa1">项目方案整理</button><button class="event" style="--start:5;--span:2;--lane:0;--event-color:#f6c9ad" data-title="和朋友吃饭" data-date="9月12日" data-note="晚餐，出发前确认餐厅。" data-color="#efad81">和朋友吃饭</button></div>
           </div>
           <div class="week">
             <div class="dates"><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day today"><span>18</span></div><div class="day weekend">19</div><div class="day weekend">20</div></div>
-            <div class="event-layer"><button class="event" style="--start:0;--span:7;--event-color:#abd5e8" data-title="新界面设计" data-date="9月14日—9月20日" data-note="主界面改成固定比例月历与扁平便当盒结构。" data-color="#78b8db">新界面设计</button></div>
+            <div class="event-layer" style="--lanes:3"><button class="event" style="--start:0;--span:7;--lane:0;--event-color:#abd5e8" data-title="新界面设计" data-date="9月14日—9月20日" data-note="主界面改成便当盒结构，行高随当周日程条数变化。" data-color="#78b8db">新界面设计</button><button class="event" style="--start:2;--span:3;--lane:1;--event-color:#c8c2e9" data-title="双周迭代 S12" data-date="9月16日—9月18日" data-note="评审放在周五上午。" data-color="#aaa2dc">双周迭代 S12</button><button class="event" style="--start:3;--span:1;--lane:2;--event-color:#f4c9d6" data-title="体检" data-date="9月17日" data-note="空腹，8:30 前到。" data-color="#e79ab0">体检</button><button class="event" style="--start:4;--span:1;--lane:2;--event-color:#f4d58a" data-title="团建" data-date="9月18日" data-note="下午出发，记得带外套。" data-color="#e6bd5e">团建</button></div>
           </div>
           <div class="week">
             <div class="dates"><div class="day">21</div><div class="day">22</div><div class="day">23</div><div class="day">24</div><div class="day">25</div><div class="day weekend">26</div><div class="day weekend">27</div></div>
-            <div class="event-layer"><button class="event" style="--start:3;--span:3;--event-color:#a8d9c5" data-title="完成本月复盘" data-date="9月24日—9月26日" data-note="回顾本月完成的事项和下月计划。" data-color="#73bfa1">完成本月复盘</button></div>
+            <div class="event-layer" style="--lanes:1"><button class="event" style="--start:3;--span:3;--lane:0;--event-color:#a8d9c5" data-title="完成本月复盘" data-date="9月24日—9月26日" data-note="回顾本月完成的事项和下月计划。" data-color="#73bfa1">完成本月复盘</button></div>
           </div>
           <div class="week">
             <div class="dates"><div class="day">28</div><div class="day">29</div><div class="day">30</div><div class="day out">1</div><div class="day out">2</div><div class="day out weekend">3</div><div class="day out weekend">4</div></div>
-          </div>
-          <div class="week">
-            <div class="dates"><div class="day out">5</div><div class="day out">6</div><div class="day out">7</div><div class="day out">8</div><div class="day out">9</div><div class="day out weekend">10</div><div class="day out weekend">11</div></div>
           </div>
         </div>
       </section>
@@ -305,23 +315,29 @@
           <div class="detail-meta" id="detailMeta"></div>
           <div class="detail-note" id="detailNote"></div>
           <button class="detail-lock" id="detailLock" type="button">点击固定</button>
-        </div>
-      </section>
-
-      <section class="bottom-bento" aria-label="月份和快捷操作">
-        <div class="month-tile">
-          <div class="month-kicker">2026 / SEPTEMBER</div>
-          <div class="month-name">9<small>月</small></div>
-          <div class="month-count">本月 9 项日程</div>
-          <div class="month-nav"><button type="button" title="上一月">‹</button><button type="button" title="下一月">›</button></div>
-          <button class="range-button" type="button">选日期</button>
-        </div>
-        <div class="quick-actions">
-          <button class="today-button" type="button">今天</button>
-          <button class="new-button" type="button"><span>＋</span>新建日程</button>
+          <div class="detail-actions" id="detailActions" hidden>
+            <button type="button">编辑</button>
+            <button type="button">完成</button>
+            <button type="button">置顶</button>
+            <button type="button" class="danger">删除</button>
+          </div>
         </div>
       </section>
     </div>
+
+    <section class="bottom-bento" aria-label="月份和快捷操作">
+      <div class="month-tile">
+        <div class="month-kicker">2026 / SEPTEMBER</div>
+        <div class="month-name">9<small>月</small></div>
+        <div class="month-count">本月 9 项日程</div>
+        <div class="month-nav"><button type="button" title="上一月">‹</button><button type="button" title="下一月">›</button></div>
+        <button class="range-button" type="button">选日期</button>
+      </div>
+      <div class="quick-actions">
+        <button class="today-button" type="button">今天</button>
+        <button class="new-button" type="button"><span>＋</span>新建日程</button>
+      </div>
+    </section>
   </main>
 
   <script>
@@ -333,6 +349,8 @@
     const detailNote = document.getElementById('detailNote');
     const detailLine = document.getElementById('detailLine');
     const detailLock = document.getElementById('detailLock');
+    const detailActions = document.getElementById('detailActions');
+    const reminderHead = document.getElementById('reminderHead');
     let locked = null;
 
     function showDetail(bar) {
@@ -343,12 +361,25 @@
       detailLine.style.background = bar.dataset.color;
       detailSlot.classList.add('show');
       detailLock.textContent = locked === bar ? '取消固定' : '点击固定';
+      // 悬停只是预览；点选之后才出现操作按钮
+      detailActions.hidden = locked !== bar;
+      detailActions.children[1].textContent = bar.classList.contains('done') ? '取消完成' : '完成';
+      // 点选之后把详情滚进视野，省得用户自己找
+      if (locked === bar) setTimeout(() => detailSlot.scrollIntoView({ block: 'end' }), 320);
     }
 
     function hideDetail() {
       if (locked) return;
       document.querySelectorAll('.event').forEach(item => item.classList.remove('hot'));
       detailSlot.classList.remove('show');
+      detailActions.hidden = true;
+    }
+
+    function updateReminderCount() {
+      const n = deck.children.length;
+      if (!n) { reminderHead.remove(); return; }
+      reminderHead.querySelector('b').textContent = `待确认提醒 ${n} 条`;
+      reminderHead.querySelector('span').hidden = n < 2;
     }
 
     calendar.addEventListener('pointerover', event => {
@@ -377,10 +408,13 @@
         event.stopPropagation();
         const card = event.target.closest('.reminder-card');
         card.remove();
+        updateReminderCount();
         if (!deck.children.length) deck.remove();
         return;
       }
-      deck.classList.toggle('expanded');
+      const expanded = deck.classList.toggle('expanded');
+      const hint = reminderHead.querySelector('span');
+      hint.textContent = expanded ? '点击收起' : '滚轮切换 · 点击展开';
     });
     deck.addEventListener('wheel', event => {
       if (deck.classList.contains('expanded') || deck.children.length < 2) return;
