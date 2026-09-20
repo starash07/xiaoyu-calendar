@@ -160,25 +160,27 @@
     }
     .day.weekend { color: #dc7c83; }
     .day.out { color: #bbc7ce; }
-    .day.today span { width: 27px; height: 27px; display: grid; place-items: center; border-radius: 50%; background: var(--coral); color: #fff; font-weight: 600; }
-    .event-layer { position: relative; height: calc(var(--lanes, 1) * 23px); pointer-events: none; }
+    .day.today { position: relative; }
+    .day.today span { color: #e2696e; font-weight: 700; }
+    .day.today::after { content: ""; position: absolute; left: 50%; bottom: 1px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: #e2696e; }
+    .event-layer { position: relative; height: calc(var(--lanes, 1) * 19px); pointer-events: none; }
     .event {
       --start: 0;
       --span: 1;
       --lane: 0;
       position: absolute;
-      top: calc(var(--lane) * 23px);
+      top: calc(var(--lane) * 19px);
       left: calc(var(--start) * 100% / 7 + 2px);
       width: calc(var(--span) * 100% / 7 - 4px);
-      height: 19px;
+      height: 15px;
       overflow: hidden;
-      padding: 0 6px;
+      padding: 0 8px;
       border: 0;
-      border-radius: 5px;
+      border-radius: 999px;
       background: var(--event-color, var(--mint));
       color: #315a53;
-      font-size: 11px;
-      line-height: 19px;
+      font-size: 10px;
+      line-height: 15px;
       text-align: left;
       white-space: nowrap;
       text-overflow: ellipsis;
