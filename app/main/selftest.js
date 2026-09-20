@@ -92,6 +92,20 @@ async function run({ store, w1, w2, broadcast }) {
     await shot(w2.win, 'w2-settings');
     await js(w2.win, 'Settings.close()');
 
+    // 透明无边框窗口还能不能拖边缩放：直接问系统，鼠标落在窗口边缘算什么区域
+    {
+      const koffi = require('koffi');
+      const SendMessageW = koffi.load('user32.dll').func('intptr __stdcall SendMessageW(intptr hwnd, uint msg, uintptr wParam, intptr lParam)');
+      const NAMES = { 1: '客户区', 2: '标题栏', 10: '左边', 11: '右边', 12: '上边', 13: '左上角', 14: '右上角', 15: '下边', 16: '左下角', 17: '右下角' };
+      const hwnd = W.hwndOf(w2.win), r = W.windowRect(hwnd);
+      const probe = (x, y) => { const v = Number(SendMessageW(hwnd, 0x0084, 0, ((y & 0xFFFF) << 16) | (x & 0xFFFF))); return NAMES[v] || v; };
+      note('边缘命中测试', {
+        右下角: probe(r.right - 2, r.bottom - 2), 下边: probe((r.left + r.right) / 2 | 0, r.bottom - 2),
+        右边: probe(r.right - 2, (r.top + r.bottom) / 2 | 0), 左边: probe(r.left + 1, (r.top + r.bottom) / 2 | 0),
+        上边: probe((r.left + r.right) / 2 | 0, r.top + 1),
+      });
+    }
+
     // 吸附到顶边 → 收起 → 滑出
     const wa = screen.getPrimaryDisplay().workArea;
     w2.win.setBounds({ x: wa.x + 300, y: wa.y + 10, width: 480, height: 640 });
