@@ -202,18 +202,20 @@
       align-items: start;
       padding: 11px 12px;
       border-radius: 12px;
-      background: #edf7f4;
+      background: var(--tone-bg, #edf7f4);
+      transition: background .2s ease;
     }
-    .detail-title { grid-column: 1; font-size: 12px; font-weight: 700; }
-    .detail-meta { grid-column: 1; color: #6f8b94; font-size: 10px; }
-    .detail-note { grid-column: 1; color: #56727c; font-size: 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .detail-title { grid-column: 1; color: var(--tone-ink, #315873); font-size: 12px; font-weight: 700; }
+    .detail-meta { grid-column: 1; color: var(--tone-soft, #6f8b94); font-size: 10px; }
+    .detail-note { grid-column: 1; color: var(--tone-soft, #56727c); font-size: 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
     /* 选中后才出现的操作图标，放在右上角 */
     .detail-actions { grid-column: 2; grid-row: 1 / 4; align-self: start; display: flex; gap: 4px; }
-    .detail-actions button { width: 26px; height: 26px; display: grid; place-items: center; padding: 0; border: 1px solid #d5e5e0; border-radius: 8px; background: rgba(255,255,255,.8); color: #4a7b74; }
-    .detail-actions button:hover { background: #fff; }
+    .detail-actions button { width: 26px; height: 26px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 8px; background: #fff; color: var(--tone-ink, #4a7b74); }
+    .detail-actions button:hover { box-shadow: 0 1px 5px rgba(49, 88, 115, .16); }
     .detail-actions button svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-    .detail-actions .danger { border-color: #eed7d7; color: #b56464; }
-    .detail-actions .on { border-color: #bcd9cd; background: #dff0e8; }
+    .detail-actions .danger:hover { color: #c0575c; }
+    /* 已完成：勾变成实心 */
+    .detail-actions .on { background: var(--tone-ink, #4a7b74); color: #fff; }
 
     /* 月份和操作全部在月历下方。 */
     /* 固定在窗口底部，不跟着内容滚动：日程多的时候也能直接点「新建日程」 */
@@ -357,6 +359,7 @@
     const detailMeta = document.getElementById('detailMeta');
     const detailNote = document.getElementById('detailNote');
     const detailDone = document.getElementById('detailDone');
+    const detailCard = document.querySelector('.detail-card');
     const detailActions = document.getElementById('detailActions');
     const reminderHead = document.getElementById('reminderHead');
     let locked = null;
@@ -369,6 +372,12 @@
       detailSlot.classList.add('show');
       // 悬停只是预览；点选之后才出现操作按钮
       detailActions.hidden = locked !== bar;
+      const tone = toneOf(getComputedStyle(bar).getPropertyValue('--event-color'));
+      if (tone) {
+        detailCard.style.setProperty('--tone-bg', tone.bg);
+        detailCard.style.setProperty('--tone-ink', tone.ink);
+        detailCard.style.setProperty('--tone-soft', tone.soft);
+      }
       const done = bar.classList.contains('done');
       detailDone.classList.toggle('on', done);
       detailDone.title = detailDone.ariaLabel = done ? '取消完成' : '完成';
@@ -379,6 +388,23 @@
       document.querySelectorAll('.event').forEach(item => item.classList.remove('hot'));
       detailSlot.classList.remove('show');
       detailActions.hidden = true;
+    }
+
+    // 从甘特条的颜色推出一套：很浅的底、压暗的图标色、中间调的说明文字色
+    function toneOf(color) {
+      const hex = (color || '').trim().replace('#', '');
+      const full = hex.length === 3 ? hex.split('').map(c => c + c).join('') : hex;
+      const n = parseInt(full, 16);
+      if (full.length !== 6 || Number.isNaN(n)) return null;
+      const r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+      const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+      let h = 0;
+      if (d) h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      h = Math.round(h * 60);
+      const l = (max + min) / 2;
+      const s = d ? d / (1 - Math.abs(2 * l - 1)) : 0;
+      const sat = Math.round(Math.min(Math.max(s, .16), .6) * 100);
+      return { bg: `hsl(${h} ${Math.round(sat * .9)}% 95%)`, ink: `hsl(${h} ${sat}% 32%)`, soft: `hsl(${h} ${Math.round(sat * .75)}% 45%)` };
     }
 
     function updateReminderCount() {
