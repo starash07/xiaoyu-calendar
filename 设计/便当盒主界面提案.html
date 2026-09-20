@@ -195,25 +195,25 @@
     .detail-slot { flex: 0 0 auto; max-height: 0; margin: 0 16px; overflow: hidden; opacity: 0; transition: max-height .24s cubic-bezier(.22, 1, .36, 1), margin .24s ease, opacity .16s ease; }
     .detail-slot.show { max-height: 168px; margin-top: 12px; opacity: 1; }
     .detail-card {
-      min-height: 78px;
+      min-height: 62px;
       display: grid;
-      grid-template-columns: 4px minmax(0, 1fr) auto;
+      grid-template-columns: minmax(0, 1fr) auto;
       gap: 3px 10px;
       align-items: start;
       padding: 11px 12px;
       border-radius: 12px;
       background: #edf7f4;
     }
-    .detail-line { grid-row: 1 / 4; width: 4px; align-self: stretch; border-radius: 4px; background: var(--mint); }
-    .detail-title { font-size: 12px; font-weight: 700; }
-    .detail-meta { color: #6f8b94; font-size: 10px; }
-    .detail-note { color: #56727c; font-size: 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-    .detail-lock { grid-column: 3; grid-row: 1 / 3; padding: 2px 7px; border: 0; border-radius: 7px; background: rgba(255,255,255,.75); color: #65848b; font-size: 9px; }
-    /* 选中后才出现的操作按钮 */
-    .detail-actions { grid-column: 2 / 4; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-    .detail-actions button { min-height: 25px; padding: 0 11px; border: 1px solid #d5e5e0; border-radius: 8px; background: rgba(255,255,255,.8); color: #4a7b74; font-size: 10px; }
+    .detail-title { grid-column: 1; font-size: 12px; font-weight: 700; }
+    .detail-meta { grid-column: 1; color: #6f8b94; font-size: 10px; }
+    .detail-note { grid-column: 1; color: #56727c; font-size: 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    /* 选中后才出现的操作图标，放在右上角 */
+    .detail-actions { grid-column: 2; grid-row: 1 / 4; align-self: start; display: flex; gap: 4px; }
+    .detail-actions button { width: 26px; height: 26px; display: grid; place-items: center; padding: 0; border: 1px solid #d5e5e0; border-radius: 8px; background: rgba(255,255,255,.8); color: #4a7b74; }
     .detail-actions button:hover { background: #fff; }
+    .detail-actions button svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
     .detail-actions .danger { border-color: #eed7d7; color: #b56464; }
+    .detail-actions .on { border-color: #bcd9cd; background: #dff0e8; }
 
     /* 月份和操作全部在月历下方。 */
     /* 固定在窗口底部，不跟着内容滚动：日程多的时候也能直接点「新建日程」 */
@@ -331,16 +331,19 @@
 
     <section class="detail-slot" id="detailSlot" aria-live="polite">
       <div class="detail-card">
-        <i class="detail-line" id="detailLine"></i>
         <div class="detail-title" id="detailTitle"></div>
         <div class="detail-meta" id="detailMeta"></div>
         <div class="detail-note" id="detailNote"></div>
-        <button class="detail-lock" id="detailLock" type="button">点击固定</button>
         <div class="detail-actions" id="detailActions" hidden>
-          <button type="button">编辑</button>
-          <button type="button">完成</button>
-          <button type="button">置顶</button>
-          <button type="button" class="danger">删除</button>
+          <button type="button" title="编辑" aria-label="编辑">
+            <svg viewBox="0 0 24 24"><path d="m15 5 4 4M5 19l1.2-4.2 8.5-8.5 3 3-8.5 8.5L5 19Z"/></svg>
+          </button>
+          <button type="button" id="detailDone" title="完成" aria-label="完成">
+            <svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
+          </button>
+          <button type="button" class="danger" title="删除" aria-label="删除">
+            <svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V4.8h4V7M7.5 7l.9 12.2h7.2L16.5 7"/></svg>
+          </button>
         </div>
       </div>
     </section>
@@ -353,8 +356,7 @@
     const detailTitle = document.getElementById('detailTitle');
     const detailMeta = document.getElementById('detailMeta');
     const detailNote = document.getElementById('detailNote');
-    const detailLine = document.getElementById('detailLine');
-    const detailLock = document.getElementById('detailLock');
+    const detailDone = document.getElementById('detailDone');
     const detailActions = document.getElementById('detailActions');
     const reminderHead = document.getElementById('reminderHead');
     let locked = null;
@@ -364,12 +366,12 @@
       detailTitle.textContent = bar.dataset.title;
       detailMeta.textContent = bar.dataset.date;
       detailNote.textContent = bar.dataset.note;
-      detailLine.style.background = bar.dataset.color;
       detailSlot.classList.add('show');
-      detailLock.textContent = locked === bar ? '取消固定' : '点击固定';
       // 悬停只是预览；点选之后才出现操作按钮
       detailActions.hidden = locked !== bar;
-      detailActions.children[1].textContent = bar.classList.contains('done') ? '取消完成' : '完成';
+      const done = bar.classList.contains('done');
+      detailDone.classList.toggle('on', done);
+      detailDone.title = detailDone.ariaLabel = done ? '取消完成' : '完成';
     }
 
     function hideDetail() {
@@ -412,15 +414,6 @@
       locked = null;
       document.querySelectorAll('.event').forEach(item => item.classList.remove('locked'));
       hideDetail();
-    });
-
-    detailLock.addEventListener('click', () => {
-      if (!locked) {
-        const hot = document.querySelector('.event.hot');
-        if (hot) locked = hot;
-      } else locked = null;
-      document.querySelectorAll('.event').forEach(item => item.classList.toggle('locked', item === locked));
-      if (locked) showDetail(locked); else hideDetail();
     });
 
     deck.addEventListener('click', event => {
