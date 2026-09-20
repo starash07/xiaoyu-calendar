@@ -95,7 +95,7 @@
     /* 提醒：浅杏底卡片，文字左对齐，不用整条重色；下层卡片露出边缘，右上角标数量。 */
     .reminder-head { display: flex; align-items: baseline; justify-content: space-between; margin: 0 4px 5px; color: #9a8270; font-size: 9px; }
     .reminder-head b { color: #7c5c46; font-size: 10px; font-weight: 600; }
-    .reminder-deck { flex: 0 0 auto; position: relative; height: 66px; margin: 0 2px 12px; }
+    .reminder-deck { flex: 0 0 auto; position: relative; height: calc(48px + var(--peek, 15px)); margin: 0 2px 12px; }
     .reminder-card {
       position: absolute;
       inset: 0 0 auto;
@@ -381,9 +381,17 @@
 
     function updateReminderCount() {
       const n = deck.children.length;
-      if (!n) { reminderHead.remove(); return; }
+      if (!n) { reminderHead.remove(); deck.remove(); return; }
       reminderHead.querySelector('b').textContent = `待确认提醒 ${n} 条`;
       reminderHead.querySelector('span').hidden = n < 2;
+      // 下面露出来的半张卡占多高，由后面还压着几张决定
+      deck.style.setProperty('--peek', n > 2 ? '15px' : n === 2 ? '8px' : '0px');
+      if (n < 2) collapseDeck();
+    }
+
+    function collapseDeck() {
+      deck.classList.remove('expanded');
+      reminderHead.querySelector('span').textContent = '滚轮切换 · 点击展开';
     }
 
     calendar.addEventListener('pointerover', event => {
@@ -421,13 +429,15 @@
         const card = event.target.closest('.reminder-card');
         card.remove();
         updateReminderCount();
-        if (!deck.children.length) deck.remove();
         return;
       }
+      // 只剩一条时没有可展开的东西，点了也不该多出一块空白
+      if (deck.children.length < 2) return;
       const expanded = deck.classList.toggle('expanded');
       const hint = reminderHead.querySelector('span');
       hint.textContent = expanded ? '点击收起' : '滚轮切换 · 点击展开';
     });
+    updateReminderCount();
     deck.addEventListener('wheel', event => {
       if (deck.classList.contains('expanded') || deck.children.length < 2) return;
       event.preventDefault();
