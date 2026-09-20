@@ -203,15 +203,19 @@
       padding: 11px 12px;
       border-radius: 12px;
       background: var(--tone-bg, #edf7f4);
-      transition: background .2s ease;
+      transition: background .22s ease;
     }
-    .detail-title { grid-column: 1; color: var(--tone-ink, #315873); font-size: 12px; font-weight: 700; }
-    .detail-meta { grid-column: 1; color: var(--tone-soft, #6f8b94); font-size: 10px; }
-    .detail-note { grid-column: 1; color: var(--tone-soft, #56727c); font-size: 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .detail-title { grid-column: 1; color: var(--tone-ink, #315873); font-size: 12px; font-weight: 700; transition: color .22s ease; }
+    .detail-meta { grid-column: 1; color: var(--tone-soft, #6f8b94); font-size: 10px; transition: color .22s ease; }
+    .detail-note { grid-column: 1; color: var(--tone-soft, #56727c); font-size: 10px; transition: color .22s ease; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    /* 悬停换一条日程时，文字淡入着换，不硬切 */
+    @keyframes detail-swap { from { opacity: .2; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    .detail-card.swap > :not(.detail-actions) { animation: detail-swap .22s cubic-bezier(.22, 1, .36, 1); }
     /* 选中后才出现的操作图标，放在右上角 */
     .detail-actions { grid-column: 2; grid-row: 1 / 4; align-self: start; display: flex; gap: 4px; }
-    .detail-actions button { width: 26px; height: 26px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 8px; background: #fff; color: var(--tone-ink, #4a7b74); }
-    .detail-actions button:hover { box-shadow: 0 1px 5px rgba(49, 88, 115, .16); }
+    .detail-actions button { width: 26px; height: 26px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 8px; background: #fff; color: var(--tone-ink, #4a7b74); transition: transform .15s ease, box-shadow .15s ease, background .2s ease, color .2s ease; }
+    .detail-actions button:hover { transform: translateY(-1.5px); box-shadow: 0 1px 3px rgba(49, 88, 115, .1); }
+    .detail-actions button:active { transform: translateY(0); }
     .detail-actions button svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
     .detail-actions .danger:hover { color: #c0575c; }
     /* 已完成：勾变成实心 */
@@ -251,7 +255,7 @@
       .calendar-card { padding-left: 7px; padding-right: 7px; }
     }
     @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { transition: none !important; }
+      *, *::before, *::after { transition: none !important; animation: none !important; }
     }
   </style>
 </head>
@@ -364,8 +368,17 @@
     const reminderHead = document.getElementById('reminderHead');
     let locked = null;
 
+    let shownBar = null;
+
     function showDetail(bar) {
       document.querySelectorAll('.event').forEach(item => item.classList.toggle('hot', item === bar));
+      // 从一条换到另一条：让文字重新淡入一次
+      if (detailSlot.classList.contains('show') && shownBar !== bar) {
+        detailCard.classList.remove('swap');
+        void detailCard.offsetWidth;
+        detailCard.classList.add('swap');
+      }
+      shownBar = bar;
       detailTitle.textContent = bar.dataset.title;
       detailMeta.textContent = bar.dataset.date;
       detailNote.textContent = bar.dataset.note;
@@ -385,6 +398,8 @@
 
     function hideDetail() {
       if (locked) return;
+      shownBar = null;
+      detailCard.classList.remove('swap');
       document.querySelectorAll('.event').forEach(item => item.classList.remove('hot'));
       detailSlot.classList.remove('show');
       detailActions.hidden = true;
