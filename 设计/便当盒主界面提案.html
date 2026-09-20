@@ -26,8 +26,9 @@
     body {
       min-height: 100vh;
       display: grid;
-      place-items: center;
-      overflow: hidden;
+      place-items: start center;
+      padding: 18px 0;
+      overflow: auto;
       background:
         radial-gradient(circle at 18% 8%, #ffffff 0 3%, transparent 22%),
         linear-gradient(145deg, #edf4f6, #e8edef);
@@ -40,7 +41,9 @@
 
     .app {
       width: min(480px, 100vw);
-      height: min(720px, 100vh);
+      height: auto;
+      max-height: calc(100vh - 36px);
+      padding-bottom: 16px;
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -76,7 +79,7 @@
     .icon-button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
 
     .content {
-      flex: 1;
+      flex: 0 1 auto;
       min-height: 0;
       display: flex;
       flex-direction: column;
@@ -187,8 +190,8 @@
     /* 已完成：灰显，排在未完成的下面 */
     .event.done { --event-color: #e7ecee; color: #8b98a1; }
 
-    .detail-slot { flex: 0 0 auto; max-height: 0; margin-top: 0; overflow: hidden; opacity: 0; transition: max-height .24s cubic-bezier(.22, 1, .36, 1), margin .24s ease, opacity .16s ease; }
-    .detail-slot.show { max-height: 168px; margin-top: 10px; opacity: 1; }
+    .detail-slot { flex: 0 0 auto; max-height: 0; margin: 0 16px; overflow: hidden; opacity: 0; transition: max-height .24s cubic-bezier(.22, 1, .36, 1), margin .24s ease, opacity .16s ease; }
+    .detail-slot.show { max-height: 168px; margin-top: 12px; opacity: 1; }
     .detail-card {
       min-height: 78px;
       display: grid;
@@ -212,7 +215,7 @@
 
     /* 月份和操作全部在月历下方。 */
     /* 固定在窗口底部，不跟着内容滚动：日程多的时候也能直接点「新建日程」 */
-    .bottom-bento { flex: 0 0 auto; height: 88px; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(118px, .8fr); gap: 10px; margin: 8px 16px 16px; }
+    .bottom-bento { flex: 0 0 auto; height: 88px; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(118px, .8fr); gap: 10px; margin: 8px 16px 0; }
     .month-tile {
       position: relative;
       display: grid;
@@ -238,7 +241,7 @@
     @media (max-width: 420px) {
       .app { border-radius: 12px; }
       .content { padding-left: 12px; padding-right: 12px; }
-      .bottom-bento { margin-left: 12px; margin-right: 12px; }
+      .bottom-bento, .detail-slot { margin-left: 12px; margin-right: 12px; }
       .prototype { display: none; }
       .day { font-size: 13px; }
       .calendar-card { padding-left: 7px; padding-right: 7px; }
@@ -308,21 +311,6 @@
         </div>
       </section>
 
-      <section class="detail-slot" id="detailSlot" aria-live="polite">
-        <div class="detail-card">
-          <i class="detail-line" id="detailLine"></i>
-          <div class="detail-title" id="detailTitle"></div>
-          <div class="detail-meta" id="detailMeta"></div>
-          <div class="detail-note" id="detailNote"></div>
-          <button class="detail-lock" id="detailLock" type="button">点击固定</button>
-          <div class="detail-actions" id="detailActions" hidden>
-            <button type="button">编辑</button>
-            <button type="button">完成</button>
-            <button type="button">置顶</button>
-            <button type="button" class="danger">删除</button>
-          </div>
-        </div>
-      </section>
     </div>
 
     <section class="bottom-bento" aria-label="月份和快捷操作">
@@ -336,6 +324,22 @@
       <div class="quick-actions">
         <button class="today-button" type="button">今天</button>
         <button class="new-button" type="button"><span>＋</span>新建日程</button>
+      </div>
+    </section>
+
+    <section class="detail-slot" id="detailSlot" aria-live="polite">
+      <div class="detail-card">
+        <i class="detail-line" id="detailLine"></i>
+        <div class="detail-title" id="detailTitle"></div>
+        <div class="detail-meta" id="detailMeta"></div>
+        <div class="detail-note" id="detailNote"></div>
+        <button class="detail-lock" id="detailLock" type="button">点击固定</button>
+        <div class="detail-actions" id="detailActions" hidden>
+          <button type="button">编辑</button>
+          <button type="button">完成</button>
+          <button type="button">置顶</button>
+          <button type="button" class="danger">删除</button>
+        </div>
       </div>
     </section>
   </main>
@@ -364,8 +368,6 @@
       // 悬停只是预览；点选之后才出现操作按钮
       detailActions.hidden = locked !== bar;
       detailActions.children[1].textContent = bar.classList.contains('done') ? '取消完成' : '完成';
-      // 点选之后把详情滚进视野，省得用户自己找
-      if (locked === bar) setTimeout(() => detailSlot.scrollIntoView({ block: 'end' }), 320);
     }
 
     function hideDetail() {
@@ -394,6 +396,14 @@
       document.querySelectorAll('.event').forEach(item => item.classList.toggle('locked', item === locked));
       if (locked) showDetail(locked); else hideDetail();
     });
+    // 点日程以外的任何地方：取消固定，详情收起，窗口缩回去
+    document.addEventListener('click', event => {
+      if (!locked || event.target.closest('.event') || event.target.closest('.detail-slot')) return;
+      locked = null;
+      document.querySelectorAll('.event').forEach(item => item.classList.remove('locked'));
+      hideDetail();
+    });
+
     detailLock.addEventListener('click', () => {
       if (!locked) {
         const hot = document.querySelector('.event.hot');
