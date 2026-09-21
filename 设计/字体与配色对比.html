@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>日期字体、今天标记与配色对比</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 26px 22px 40px;
+    background: linear-gradient(145deg, #edf4f6, #e8edef);
+    color: #315873;
+    font: 12px/1.5 "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+  }
+  h1 { margin: 0 0 4px; font-size: 16px; font-weight: 700; letter-spacing: 1px; }
+  .sub { margin: 0 0 22px; color: #7f97a6; font-size: 11px; }
+  h2 { margin: 26px 0 10px; font-size: 12px; font-weight: 600; color: #4b7690; letter-spacing: 1px; }
+  .sheet { max-width: 980px; }
+  .card {
+    margin-bottom: 9px; padding: 12px 14px 14px;
+    border-radius: 14px; background: #fbfcfc; border: 1px solid #e3edf1;
+    display: grid; grid-template-columns: 118px minmax(0, 1fr); gap: 0 14px; align-items: center;
+  }
+  .name { color: #6d8ea3; font-size: 11px; line-height: 1.35; }
+  .name b { display: block; color: #31597a; font-size: 12px; font-weight: 600; }
+  .name i { font-style: normal; color: #9bb0bd; font-size: 10px; }
+  .pick { display: inline-block; margin-top: 3px; padding: 1px 7px; border-radius: 99px; background: #eaf5fb; color: #5b8ba8; font-size: 10px; }
+
+  /* 一行日期 + 一条甘特条，和主界面同样的尺寸 */
+  .row { min-width: 0; }
+  .dates { display: grid; grid-template-columns: repeat(7, 1fr); align-items: start; height: 26px; }
+  .day { display: flex; align-items: center; justify-content: center; height: 26px; color: #31597a; font-size: 16px; font-variant-numeric: tabular-nums; position: relative; }
+  .day.weekend { color: #d98a90; }
+  .day.out { color: #c3cfd6; }
+  .bar { margin-top: 9px; height: 15px; width: 72%; display: flex; align-items: center; padding: 0 8px; border-radius: 999px; background: #abd5e8; color: #315a53; font-size: 10px; }
+
+  .f1 .day { font-family: "Segoe UI", sans-serif; }
+  .f2 .day { font-family: "Segoe UI Semilight", "Segoe UI", sans-serif; }
+  .f3 .day { font-family: Bahnschrift, sans-serif; }
+  .f4 .day { font-family: Candara, sans-serif; }
+  .f5 .day { font-family: Corbel, sans-serif; }
+  .f6 .day { font-family: Constantia, serif; }
+  .f7 .day { font-family: Cambria, serif; }
+  .f8 .day { font-family: "Sitka Text", serif; }
+  .f9 .day { font-family: "Trebuchet MS", sans-serif; }
+  .f10 .day { font-family: Georgia, serif; }
+
+  /* 「今天」的几种标记方式，都作用在 18 上 */
+  .m1 .t { width: 26px; height: 26px; border-radius: 50%; background: #ffeae8; color: #d9595f; font-weight: 600; display: grid; place-items: center; }
+  .m2 .t { width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid #f2b6b8; color: #d9595f; font-weight: 600; display: grid; place-items: center; }
+  .m3 .t { color: #d9595f; font-weight: 600; }
+  .m4 .t { width: 34px; height: 26px; border-radius: 9px; background: #fff1f0; color: #d9595f; font-weight: 600; display: grid; place-items: center; }
+  .m5 .t { color: #d9595f; font-weight: 600; box-shadow: 0 8px 0 -6px #e2696e; }
+  .m6 .t { width: 26px; height: 26px; border-radius: 50%; background: #ed7f83; color: #fff; font-weight: 600; display: grid; place-items: center; }
+  .m7 .t { color: #d9595f; font-weight: 600; }
+  .m7 .day.today::after { content: ""; position: absolute; left: 50%; top: 21px; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: #e2696e; }
+  .marks .day { font-family: Bahnschrift, "Segoe UI", sans-serif; }
+
+  /* 三、配色：周末色 + 今天色 */
+  .scheme .day { font-family: Bahnschrift, "Segoe UI", sans-serif; color: #31597a; }
+  .scheme .day.weekend { color: var(--wk); }
+  .scheme .day.out { color: #c3cfd6; }
+  .scheme .t { width: 26px; height: 26px; border-radius: 50%; background: var(--td-bg); color: var(--td); font-weight: 600; display: grid; place-items: center; }
+  .s1 { --wk: #8aa3b3; --td: #3f8cb8; --td-bg: #e2f0f8; }
+  .s2 { --wk: #b98d84; --td: #b4705f; --td-bg: #fbeee8; }
+  .s3 { --wk: #8aa3b3; --td: #4e957f; --td-bg: #e3f2ec; }
+  .s4 { --wk: #c49aa0; --td: #b87d86; --td-bg: #f9ecee; }
+  .s5 { --wk: #97a9b5; --td: #fff; --td-bg: #5f8ba6; }
+  .s6 { --wk: #d98a90; --td: #d9595f; --td-bg: #ffeae8; }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <h1>日期字体、今天标记与配色对比</h1>
+  <p class="sub">都是 16px、等宽数字，和主界面里的尺寸一致；下面那条浅蓝是甘特条，用来看数字和条的关系。全部是 Windows 自带字体，别人机器上也有。</p>
+
+  <h2>一、日期字体</h2>
+
+  <div class="card f1">
+    <div class="name"><b>Segoe UI</b><i>现在用的</i></div>
+    <div class="row">
+      <div class="dates"><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day">18</div><div class="day weekend">19</div><div class="day weekend">20</div></div>
+      <div class="bar">新界面设计</div>
+    </div>
+  </div>
+
+  <div class="card f2">
+    <div class="name"><b>Segoe UI Semilight</b><i>同一族的细字重</i></div>
+    <div class="row">
+      <div class="dates"><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day">18</div><div class="day weekend">19</div><div class="day weekend">20</div></div>
+      <div class="bar">新界面设计</div>
+    </div>
+  </div>
+
+  <div class="card f3">
+    <div class="name"><b>Bahnschrift</b><i>德式工业风，窄、硬朗<span class="pick">星尘选了这个</span></i></div>
+    <div class="row">
+      <div class="dates"><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day">18</div><div class="day weekend">19</div><div class="day weekend">20</div></div>
+      <div class="bar">新界面设计</div>
+    </div>
+  </div>
+
+  <div class="card f4">
+    <div class="name"><b>Candara</b><i>人文风，笔画有起伏</i></div>
+    <div class="row">
+      <div class="dates"><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day">18</div><div class="day weekend">19</div><div class="day weekend">20</div></div>
+      <div class="bar">新界面设计</div>
+    </div>
+  </div>
+
+  <div class="card f5">
+    <div class="name"><b>Corbel</b><i>数字高低错落，很像印刷体</i></div>
+    <div class="row">
+      <div class="dates"><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day">18</div><div class="day weekend">19</div><div class="day weekend">20</div></div>
+      <div class="bar">新界面设计</div>
+    </div>
+  </div>
+
+  <div class="card f6">
+    <div class="name"><b>Constantia</b><i>衬线，书卷气</i></div>
+    <div class="row">
+      <div class="dates"><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day">18</div><div class="day weekend">19</div><div class="day weekend">20</div></div>
+      <div class="bar">新界面设计</div>
+    </div>
+  </div>
+
+  <div class="card f7">
+    <div class="name"><b>Cambria</b><i>衬线，更方正稳重</i></div>
+    <div class="row">
+      <div class="dates"><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day">18</div><div class="day weekend">19</div><div class="day weekend">20</div></div>
+      <div class="bar">新界面设计</div>
+    </div>
+  </div>
+
+  <div class="card f8">
+    <div class="name"><b>Sitka Text</b><i>衬线，笔画细腻</i></div>
+    <div class="row">
+      <div class="dates"><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day">18</div><div class="day weekend">19</div><div class="day weekend">20</div></div>
+      <div class="bar">新界面设计</div>
+    </div>
+  </div>
+
+  <div class="card f9">
+    <div class="name"><b>Trebuchet MS</b><i>圆润、亲和</i></div>
+    <div class="row">
+      <div class="dates"><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day">18</div><div class="day weekend">19</div><div class="day weekend">20</div></div>
+      <div class="bar">新界面设计</div>
+    </div>
+  </div>
+
+  <div class="card f10">
+    <div class="name"><b>Georgia</b><i>衬线，数字高低错落</i></div>
+    <div class="row">
+      <div class="dates"><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day">18</div><div class="day weekend">19</div><div class="day weekend">20</div></div>
+      <div class="bar">新界面设计</div>
+    </div>
+  </div>
+
+  <h2>二、「今天」怎么标（示例都是 18 号，字体已换成 Bahnschrift）</h2>
+
+  <div class="card marks m1">
+    <div class="name"><b>① 浅珊瑚圆底</b><i>很淡的底 + 深珊瑚数字<span class="pick">选中，颜色换成了绿色</span></i></div>
+    <div class="row">
+      <div class="dates"><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day today"><span class="t">18</span></div><div class="day weekend">19</div><div class="day weekend">20</div></div>
+      <div class="bar">新界面设计</div>
+    </div>
+  </div>
+
+  <div class="card marks m2">
+    <div class="name"><b>② 细描边圆环</b><i>只有一圈线，不填色</i></div>
+    <div class="row">
+      <div class="dates"><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day today"><span class="t">18</span></div><div class="day weekend">19</div><div class="day weekend">20</div></div>
+      <div class="bar">新界面设计</div>
+    </div>
+  </div>
+
+  <div class="card marks m3">
+    <div class="name"><b>③ 只变色加粗</b><i>没有任何装饰，最干净</i></div>
+    <div class="row">
+      <div class="dates"><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day today"><span class="t">18</span></div><div class="day weekend">19</div><div class="day weekend">20</div></div>
+      <div class="bar">新界面设计</div>
+    </div>
+  </div>
+
+  <div class="card marks m4">
+    <div class="name"><b>④ 浅色圆角方块</b><i>方块底，和便当盒的格子呼应</i></div>
+    <div class="row">
+      <div class="dates"><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day today"><span class="t">18</span></div><div class="day weekend">19</div><div class="day weekend">20</div></div>
+      <div class="bar">新界面设计</div>
+    </div>
+  </div>
+
+  <div class="card marks m5">
+    <div class="name"><b>⑤ 数字下短横线</b><i>横线贴着数字，不占额外高度</i></div>
+    <div class="row">
+      <div class="dates"><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day today"><span class="t">18</span></div><div class="day weekend">19</div><div class="day weekend">20</div></div>
+      <div class="bar">新界面设计</div>
+    </div>
+  </div>
+
+  <div class="card marks m6">
+    <div class="name"><b>⑥ 实心珊瑚圆</b><i>最早那版，作对照</i></div>
+    <div class="row">
+      <div class="dates"><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day today"><span class="t">18</span></div><div class="day weekend">19</div><div class="day weekend">20</div></div>
+      <div class="bar">新界面设计</div>
+    </div>
+  </div>
+
+  <div class="card marks m7">
+    <div class="name"><b>⑦ 变色 + 小圆点</b><i>现在这版，作对照</i></div>
+    <div class="row">
+      <div class="dates"><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day today"><span class="t">18</span></div><div class="day weekend">19</div><div class="day weekend">20</div></div>
+      <div class="bar">新界面设计</div>
+    </div>
+  </div>
+
+  <h2>三、配色：周末日期和「今天」（标记统一用①浅圆底，字体 Bahnschrift）</h2>
+
+  <div class="card scheme s1">
+    <div class="name"><b>甲 · 蓝色今天 + 灰蓝周末</b><i>今天用品牌蓝，周末只比工作日淡一档，不用彩色</i></div>
+    <div class="row">
+      <div class="dates"><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day today"><span class="t">18</span></div><div class="day weekend">19</div><div class="day weekend">20</div></div>
+      <div class="bar">新界面设计</div>
+    </div>
+  </div>
+
+  <div class="card scheme s2">
+    <div class="name"><b>乙 · 赤陶今天 + 暖灰周末</b><i>保留暖色，但从粉红挪到砖红陶土，饱和度低很多</i></div>
+    <div class="row">
+      <div class="dates"><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day today"><span class="t">18</span></div><div class="day weekend">19</div><div class="day weekend">20</div></div>
+      <div class="bar">新界面设计</div>
+    </div>
+  </div>
+
+  <div class="card scheme s3">
+    <div class="name"><b>丙 · 绿色今天 + 灰蓝周末</b><i>今天用薄荷绿，和甘特条同族<span class="pick">星尘选了这个</span></i></div>
+    <div class="row">
+      <div class="dates"><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day today"><span class="t">18</span></div><div class="day weekend">19</div><div class="day weekend">20</div></div>
+      <div class="bar">新界面设计</div>
+    </div>
+  </div>
+
+  <div class="card scheme s4">
+    <div class="name"><b>丁 · 柔玫瑰</b><i>还是粉系，但饱和度压到很低，接近豆沙色</i></div>
+    <div class="row">
+      <div class="dates"><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day today"><span class="t">18</span></div><div class="day weekend">19</div><div class="day weekend">20</div></div>
+      <div class="bar">新界面设计</div>
+    </div>
+  </div>
+
+  <div class="card scheme s5">
+    <div class="name"><b>戊 · 全不用彩色</b><i>今天是深墨圆底白字，周末淡墨，整页只有甘特条有颜色</i></div>
+    <div class="row">
+      <div class="dates"><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day today"><span class="t">18</span></div><div class="day weekend">19</div><div class="day weekend">20</div></div>
+      <div class="bar">新界面设计</div>
+    </div>
+  </div>
+
+  <div class="card scheme s6">
+    <div class="name"><b>己 · 现在这套</b><i>珊瑚红 + 粉，作对照</i></div>
+    <div class="row">
+      <div class="dates"><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day today"><span class="t">18</span></div><div class="day weekend">19</div><div class="day weekend">20</div></div>
+      <div class="bar">新界面设计</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
