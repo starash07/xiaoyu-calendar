@@ -134,45 +134,51 @@
       flex: 1 0 auto;
       display: flex;
       flex-direction: column;
-      padding: 11px 10px 9px;
+      padding: 12px 11px 5px;
       border-radius: 14px;
       background: #f7fafb;
     }
     .weekdays {
-      height: 27px;
+      height: 20px;
       flex: 0 0 auto;
+      margin-bottom: 7px;
       display: grid;
       grid-template-columns: repeat(7, 1fr);
       align-items: start;
-      color: var(--ink-3);
-      font-size: 11px;
+      color: #9db0bc;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-indent: 2px;
       text-align: center;
     }
-    .weekdays span:nth-child(n+6) { color: #d88389; }
+    .weekdays span:nth-child(n+6) { color: #dba0a4; }
     .month-grid { flex: 1 0 auto; display: flex; flex-direction: column; }
     /* 行高随当周实际条数变化：没有日程的那一周只有日期行 */
-    .week { flex: 1 0 auto; position: relative; border-top: 1px solid var(--line); padding-bottom: 7px; }
-    .dates { height: 27px; display: grid; grid-template-columns: repeat(7, 1fr); align-items: center; }
+    .week { flex: 1 0 auto; position: relative; border-top: 1px solid var(--line); padding-bottom: 9px; }
+    .dates { height: 32px; display: grid; grid-template-columns: repeat(7, 1fr); align-items: start; }
     .day {
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 27px;
-      color: #416f8d;
-      font: 14px/1 "Segoe UI", "Microsoft YaHei UI", sans-serif;
+      height: 22px;
+      color: #31597a;
+      font: 16px/22px "Segoe UI", "Microsoft YaHei UI", sans-serif;
+      font-variant-numeric: tabular-nums;
     }
-    .day.weekend { color: #dc7c83; }
-    .day.out { color: #bbc7ce; }
+    .day.weekend { color: #d98a90; }
+    .day.out { color: #c3cfd6; }
     .day.today { position: relative; }
-    .day.today span { color: #e2696e; font-weight: 700; }
-    .day.today::after { content: ""; position: absolute; left: 50%; bottom: 1px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: #e2696e; }
-    .event-layer { position: relative; height: calc(var(--lanes, 1) * 19px); pointer-events: none; }
+    .day.today span { color: #e2696e; font-weight: 600; }
+    /* 今日圆点：离数字 5px，再离下面的甘特条 9px */
+    .day.today::after { content: ""; position: absolute; left: 50%; top: 27px; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: #e2696e; }
+    .event-layer { position: relative; margin-top: 9px; height: calc(var(--lanes, 1) * 20px - 5px); pointer-events: none; }
     .event {
       --start: 0;
       --span: 1;
       --lane: 0;
       position: absolute;
-      top: calc(var(--lane) * 19px);
+      top: calc(var(--lane) * 20px);
       left: calc(var(--start) * 100% / 7 + 2px);
       width: calc(var(--span) * 100% / 7 - 4px);
       height: 15px;
@@ -255,6 +261,9 @@
       .app { border-radius: 12px; }
       .content { padding-left: 12px; padding-right: 12px; }
       .bottom-bar, .detail-slot { margin-left: 12px; margin-right: 12px; }
+      /* 窄窗口下按钮收紧，把宽度让给月份，别让它被截成「2026 年 9…」 */
+      .today-button, .new-button { padding: 0 12px; }
+      .month-pill { padding: 0 2px; }
       .prototype { display: none; }
       .calendar-card { padding-left: 7px; padding-right: 7px; }
     }
