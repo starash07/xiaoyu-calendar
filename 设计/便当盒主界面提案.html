@@ -223,33 +223,35 @@
 
     /* 月份和操作全部在月历下方。 */
     /* 固定在窗口底部，不跟着内容滚动：日程多的时候也能直接点「新建日程」 */
-    .bottom-bento { flex: 0 0 auto; height: 88px; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(118px, .8fr); gap: 10px; margin: 8px 16px 0; }
-    .month-tile {
-      position: relative;
-      display: grid;
-      grid-template-columns: 1fr auto;
-      grid-template-rows: auto 1fr auto;
-      padding: 10px 12px;
-      border-radius: 13px;
+    /* 底栏：一条药丸形的月份切换 + 回到今天 + 新建日程 */
+    .bottom-bar { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; margin: 10px 16px 0; }
+    .month-pill {
+      flex: 1;
+      min-width: 0;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 4px;
+      border-radius: 999px;
       background: var(--blue);
     }
-    .month-kicker { color: #7192a7; font: 9px/1.4 "Segoe UI", sans-serif; letter-spacing: 1.7px; }
-    .month-name { align-self: center; font-size: 27px; line-height: 1; font-weight: 500; color: #3f7598; }
-    .month-name small { margin-left: 3px; font-size: 15px; font-weight: 400; }
-    .month-count { color: #7a96a7; font-size: 9px; }
-    .month-nav { grid-column: 2; grid-row: 1; align-self: start; display: flex; gap: 4px; }
-    .month-nav button { width: 27px; height: 25px; padding: 0; border: 0; border-radius: 8px; background: rgba(255,255,255,.66); color: #5b819a; font-size: 15px; }
-    .quick-actions { display: grid; grid-template-rows: 1fr 1.15fr; gap: 8px; }
-    .today-button, .new-button { border: 0; border-radius: 12px; }
-    .today-button { background: #f1f5f7; color: #658195; font-size: 11px; }
-    .new-button { background: #fff4e9; color: #aa6048; font-size: 11px; font-weight: 700; }
-    .new-button span { margin-right: 4px; font-size: 16px; font-weight: 400; }
-    .range-button { position: absolute; right: 12px; bottom: 9px; border: 0; background: none; color: #7b96a6; font-size: 9px; text-decoration: underline; text-underline-offset: 3px; }
+    .month-step { width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; color: #5b819a; transition: background .15s ease, color .15s ease; }
+    .month-step:hover { background: rgba(255, 255, 255, .8); color: #3f7598; }
+    .month-step svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .month-label { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: #3f7598; font-size: 13px; font-weight: 600; letter-spacing: .3px; }
+    .today-button, .new-button { height: 40px; flex: 0 0 auto; padding: 0 17px; border: 0; border-radius: 999px; font-size: 12px; transition: background .15s ease, transform .15s ease; }
+    .today-button { background: #f1f5f7; color: #5e7e92; }
+    .today-button:hover { background: #e7eef2; }
+    .new-button { background: #fff4e9; color: #a0603f; font-weight: 700; }
+    .new-button:hover { background: #ffecda; }
+    .today-button:active, .new-button:active { transform: translateY(1px); }
+    .new-button span { margin-right: 5px; font-size: 15px; font-weight: 400; }
 
     @media (max-width: 420px) {
       .app { border-radius: 12px; }
       .content { padding-left: 12px; padding-right: 12px; }
-      .bottom-bento, .detail-slot { margin-left: 12px; margin-right: 12px; }
+      .bottom-bar, .detail-slot { margin-left: 12px; margin-right: 12px; }
       .prototype { display: none; }
       .day { font-size: 13px; }
       .calendar-card { padding-left: 7px; padding-right: 7px; }
@@ -321,18 +323,18 @@
 
     </div>
 
-    <section class="bottom-bento" aria-label="月份和快捷操作">
-      <div class="month-tile">
-        <div class="month-kicker">2026 / SEPTEMBER</div>
-        <div class="month-name">9<small>月</small></div>
-        <div class="month-count">本月 9 项日程</div>
-        <div class="month-nav"><button type="button" title="上一月">‹</button><button type="button" title="下一月">›</button></div>
-        <button class="range-button" type="button">选日期</button>
+    <section class="bottom-bar" aria-label="月份切换和快捷操作">
+      <div class="month-pill">
+        <button class="month-step" type="button" title="上一月" aria-label="上一月">
+          <svg viewBox="0 0 24 24"><path d="m14 6-6 6 6 6"/></svg>
+        </button>
+        <span class="month-label">2026 年 9 月</span>
+        <button class="month-step" type="button" title="下一月" aria-label="下一月">
+          <svg viewBox="0 0 24 24"><path d="m10 6 6 6-6 6"/></svg>
+        </button>
       </div>
-      <div class="quick-actions">
-        <button class="today-button" type="button">今天</button>
-        <button class="new-button" type="button"><span>＋</span>新建日程</button>
-      </div>
+      <button class="today-button" type="button">回到今天</button>
+      <button class="new-button" type="button"><span>＋</span>新建日程</button>
     </section>
 
     <section class="detail-slot" id="detailSlot" aria-live="polite">
