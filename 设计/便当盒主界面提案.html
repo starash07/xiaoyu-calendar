@@ -16,6 +16,10 @@
       --blue-strong: #78b8db;
       --coral: #ed7f83;
       --coral-soft: #fff0ed;
+      /* 今天：薄荷绿浅圆底；周末：只比工作日淡一档，不用彩色 */
+      --today: #4e957f;
+      --today-bg: #e3f2ec;
+      --weekend: #8aa3b3;
       --mint: #a8d9c5;
       --yellow: #f4d58a;
       --lavender: #c8c2e9;
@@ -152,26 +156,23 @@
       text-indent: 2px;
       text-align: center;
     }
-    .weekdays span:nth-child(n+6) { color: #dba0a4; }
+    .weekdays span:nth-child(n+6) { color: #b3c3cd; }
     .month-grid { flex: 1 0 auto; display: flex; flex-direction: column; }
     /* 行高随当周实际条数变化：没有日程的那一周只有日期行 */
     .week { flex: 1 0 auto; position: relative; border-top: 1px solid var(--line); padding-bottom: 9px; }
-    .dates { height: 32px; display: grid; grid-template-columns: repeat(7, 1fr); align-items: start; }
+    .dates { height: 26px; display: grid; grid-template-columns: repeat(7, 1fr); align-items: center; }
     .day {
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 22px;
+      height: 26px;
       color: #31597a;
-      font: 16px/22px Bahnschrift, "Segoe UI", "Microsoft YaHei UI", sans-serif;
+      font: 16px/1 Bahnschrift, "Segoe UI", "Microsoft YaHei UI", sans-serif;
       font-variant-numeric: tabular-nums;
     }
-    .day.weekend { color: #d98a90; }
+    .day.weekend { color: var(--weekend); }
     .day.out { color: #c3cfd6; }
-    .day.today { position: relative; }
-    .day.today span { color: #e2696e; font-weight: 600; }
-    /* 今日圆点：离数字 5px，再离下面的甘特条 9px */
-    .day.today::after { content: ""; position: absolute; left: 50%; top: 27px; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: #e2696e; }
+    .day.today span { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: var(--today-bg); color: var(--today); font-weight: 600; }
     .event-layer { position: relative; margin-top: 9px; height: calc(var(--lanes, 1) * 20px - 5px); pointer-events: none; }
     .event {
       --start: 0;
