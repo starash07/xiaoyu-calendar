@@ -19,6 +19,9 @@
       --mint: #a8d9c5;
       --yellow: #f4d58a;
       --lavender: #c8c2e9;
+      /* 文字三级墨色：深给标题、中给正文、浅给辅助 */
+      --ink-2: #5a7f96;
+      --ink-3: #849cac;
     }
 
     * { box-sizing: border-box; }
@@ -33,7 +36,7 @@
         radial-gradient(circle at 18% 8%, #ffffff 0 3%, transparent 22%),
         linear-gradient(145deg, #edf4f6, #e8edef);
       color: var(--ink);
-      font: 13px/1.5 "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+      font: 12px/1.5 "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
     }
 
     button { font: inherit; color: inherit; cursor: pointer; }
@@ -69,7 +72,7 @@
     .fish-mark i:nth-child(3) { background: #f0cf75; }
     .fish-mark i:nth-child(4) { background: #94d1ba; }
     .brand { font-size: 14px; font-weight: 700; letter-spacing: 1.5px; }
-    .prototype { color: #9babb5; font-size: 9px; letter-spacing: .5px; }
+    .prototype { color: var(--ink-3); font-size: 10px; letter-spacing: .5px; }
     .spacer { flex: 1; }
     .icon-button {
       width: 29px; height: 29px; display: grid; place-items: center; padding: 0;
@@ -93,8 +96,8 @@
     .content::-webkit-scrollbar-thumb { border-radius: 4px; background: #cbdce5; }
 
     /* 提醒：浅杏底卡片，文字左对齐，不用整条重色；下层卡片露出边缘，右上角标数量。 */
-    .reminder-head { margin: 0 4px 5px; color: #9a8270; font-size: 9px; }
-    .reminder-head b { color: #7c5c46; font-size: 10px; font-weight: 600; }
+    .reminder-head { margin: 0 4px 5px; color: #7c5c46; font-size: 10px; }
+    .reminder-head b { font-weight: 600; }
     .reminder-deck { flex: 0 0 auto; position: relative; height: calc(48px + var(--peek, 15px)); margin: 0 2px 12px; }
     .reminder-card {
       position: absolute;
@@ -117,9 +120,9 @@
     .reminder-card:nth-child(2) { z-index: 2; opacity: .62; transform: translateY(8px) scale(.985); }
     .reminder-card:nth-child(3) { z-index: 1; opacity: .34; transform: translateY(15px) scale(.97); }
     .reminder-card:nth-child(n+2) > * { opacity: 0; }
-    .reminder-title { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: #7c5c46; font-size: 11px; line-height: 17px; font-weight: 600; text-align: left; }
-    .reminder-reason { align-self: start; color: #806451; font-size: 9px; line-height: 16px; text-align: left; }
-    .reminder-ok { grid-column: 2; grid-row: 1 / 3; align-self: center; min-height: 23px; padding: 0 9px; border: 1px solid #efdcc8; border-radius: 7px; background: #fff; color: #a0603f; font-size: 9px; line-height: 21px; }
+    .reminder-title { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: #7c5c46; font-size: 12px; line-height: 17px; font-weight: 600; text-align: left; }
+    .reminder-reason { align-self: start; color: #96775f; font-size: 10px; line-height: 16px; text-align: left; }
+    .reminder-ok { grid-column: 2; grid-row: 1 / 3; align-self: center; min-height: 26px; padding: 0 11px; border: 1px solid #efdcc8; border-radius: 8px; background: #fff; color: #a0603f; font-size: 12px; font-weight: 600; line-height: 24px; }
     .reminder-ok:hover { background: #fff0e2; }
     .reminder-deck.expanded { height: auto; display: grid; gap: 7px; }
     .reminder-deck.expanded .reminder-card { position: relative; opacity: 1; transform: none; }
@@ -141,7 +144,7 @@
       display: grid;
       grid-template-columns: repeat(7, 1fr);
       align-items: start;
-      color: #7594a8;
+      color: var(--ink-3);
       font-size: 11px;
       text-align: center;
     }
@@ -188,7 +191,7 @@
       transition: filter .15s ease, transform .15s ease;
     }
     .event:hover, .event.hot { filter: brightness(.98) saturate(1.08); transform: translateY(-1px); }
-    .event.locked::before { content: "◆"; margin-right: 4px; font-size: 7px; }
+    .event.locked::before { content: ""; display: inline-block; width: 4px; height: 4px; margin: -1px 5px 0 0; border-radius: 50%; background: currentColor; vertical-align: middle; }
     /* 已完成：灰显，排在未完成的下面 */
     .event.done { --event-color: #e7ecee; color: #8b98a1; }
 
@@ -205,9 +208,9 @@
       background: var(--tone-bg, #edf7f4);
       transition: background .22s ease;
     }
-    .detail-title { grid-column: 1; color: var(--tone-ink, #315873); font-size: 12px; font-weight: 700; transition: color .22s ease; }
+    .detail-title { grid-column: 1; color: var(--tone-ink, #315873); font-size: 12px; font-weight: 600; transition: color .22s ease; }
     .detail-meta { grid-column: 1; color: var(--tone-soft, #6f8b94); font-size: 10px; transition: color .22s ease; }
-    .detail-note { grid-column: 1; color: var(--tone-soft, #56727c); font-size: 10px; transition: color .22s ease; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .detail-note { grid-column: 1; color: var(--tone-soft, #56727c); font-size: 11px; transition: color .22s ease; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
     /* 悬停换一条日程时，文字淡入着换，不硬切 */
     @keyframes detail-swap { from { opacity: .2; transform: translateY(4px); } to { opacity: 1; transform: none; } }
     .detail-card.swap > :not(.detail-actions) { animation: detail-swap .22s cubic-bezier(.22, 1, .36, 1); }
@@ -239,21 +242,20 @@
     .month-step { width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; color: #5b819a; transition: background .15s ease, color .15s ease; }
     .month-step:hover { background: rgba(255, 255, 255, .8); color: #3f7598; }
     .month-step svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-    .month-label { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: #3f7598; font-size: 13px; font-weight: 600; letter-spacing: .3px; }
+    .month-label { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: #3f7598; font-size: 14px; font-weight: 600; letter-spacing: .3px; }
     .today-button, .new-button { height: 40px; flex: 0 0 auto; padding: 0 17px; border: 0; border-radius: 999px; font-size: 12px; transition: background .15s ease, transform .15s ease; }
     .today-button { background: #f1f5f7; color: #5e7e92; }
     .today-button:hover { background: #e7eef2; }
-    .new-button { background: #fff4e9; color: #a0603f; font-weight: 700; }
+    .new-button { background: #fff4e9; color: #a0603f; font-weight: 600; }
     .new-button:hover { background: #ffecda; }
     .today-button:active, .new-button:active { transform: translateY(1px); }
-    .new-button span { margin-right: 5px; font-size: 15px; font-weight: 400; }
+    .new-button span { margin-right: 5px; font-size: 14px; font-weight: 400; }
 
     @media (max-width: 420px) {
       .app { border-radius: 12px; }
       .content { padding-left: 12px; padding-right: 12px; }
       .bottom-bar, .detail-slot { margin-left: 12px; margin-right: 12px; }
       .prototype { display: none; }
-      .day { font-size: 13px; }
       .calendar-card { padding-left: 7px; padding-right: 7px; }
     }
     @media (prefers-reduced-motion: reduce) {
