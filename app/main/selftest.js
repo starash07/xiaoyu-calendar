@@ -13,6 +13,7 @@ async function run({ store, w1, w2, broadcast }) {
   const note = (k, v) => { log.push([k, v]); console.log('[selftest]', k, JSON.stringify(v)); };
   const shot = async (win, name) => fs.writeFileSync(path.join(P.SHOTS, `${name}.png`), (await win.webContents.capturePage()).toPNG());
   const js = (win, code) => win.webContents.executeJavaScript(code);
+  let failed = false;
   fs.mkdirSync(P.SHOTS, { recursive: true });
 
   try {
@@ -53,6 +54,7 @@ async function run({ store, w1, w2, broadcast }) {
     await shot(w1.win, 'w1-pinned');
 
     // 下拉窗
+    await require('./w2-layout-selftest').run({ store, w2, broadcast, note, shot });
     w2.show();
     await wait(900);
     await shot(w2.win, 'w2-main');
@@ -124,10 +126,12 @@ async function run({ store, w1, w2, broadcast }) {
     await wait(600);
     note('解锁后', { embedded: w1.embedded, parent: W.parentOf(w1.hwnd) });
   } catch (e) {
+    failed = true;
     note('出错', String((e && e.stack) || e));
   }
   fs.writeFileSync(path.join(P.SHOTS, 'result.json'), JSON.stringify(log, null, 2));
-  app.quit();
+  if (failed) { w1.destroy(); w2.destroy(); app.exit(1); }
+  else app.quit();
 }
 
 module.exports = { run };

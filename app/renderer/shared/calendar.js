@@ -45,7 +45,7 @@
     };
   }
 
-  function monthHTML({ year, month, tasks, today, barH, fontSize }) {
+  function monthHTML({ year, month, tasks, today, barH, fontSize, barRadius }) {
     const { start, weeks } = D.monthGrid(year, month);
     const g = geometry(barH);
     let html = '<div class="cal-wd">' + '一二三四五六日'.split('').map(w => `<span>${w}</span>`).join('') + '</div>';
@@ -62,7 +62,8 @@
       html += `</div><div class="cal-lanes" style="height:${h}px">`;
       for (const { task: t, a, b, lane, cl, cr } of segs) {
         // 跨周被截断的一端：直角、贴边；正常结束的一端：圆角、留 2px
-        const li = cl ? 0 : 2, ri = cr ? 0 : 2, rl = cl ? 0 : g.rad, rr = cr ? 0 : g.rad;
+        const radius = barRadius == null ? g.rad : barRadius;
+        const li = cl ? 0 : 2, ri = cr ? 0 : 2, rl = cl ? 0 : radius, rr = cr ? 0 : radius;
         const style = `left:calc(${a * 100 / 7}% + ${li}px);width:calc(${(b - a + 1) * 100 / 7}% - ${li + ri}px);`
           + `top:${lane * (barH + g.gap)}px;height:${barH}px;line-height:${barH}px;font-size:${fontSize}px;padding:0 ${g.padX}px;`
           + `border-radius:${rl}px ${rr}px ${rr}px ${rl}px;`

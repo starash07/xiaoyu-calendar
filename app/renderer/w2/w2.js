@@ -1,13 +1,39 @@
-// 主界面：月历与独立侧栏。直接新建，也可以先拖选日期。
+// 主界面：便当盒布局。提醒在月历上方，月份操作在下方，详情从窗口底部展开。
 const D = RCDates, C = RCColors, K = RCCal;
 const $ = id => document.getElementById(id);
-const BAR_H = 22, FONT = 11;
-const MONTHS = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
+const BAR_H = 15, FONT = 10;
 
 const App = { state: null, view: null, hoverId: null, selectedId: null, newMode: false, sel: null };
 const cal = $('cal'), calwrap = $('calwrap');
 let reminderIndex = 0, remindersExpanded = false;
 let reminderAnimations = [];
+let shownDetailId = null;
+
+// 按面板的实际高度调整原生窗口；上限来自屏幕剩余空间，不依赖当前窗口高度。
+// 观察动画中的每一帧，让真实窗口底边也跟着详情和提醒堆缓动。
+const shell = $('appShell');
+let availableHeight = 1000, sizeFrame = 0, lastHeight = 0;
+function reportHeight() {
+  if (sizeFrame) return;
+  sizeFrame = requestAnimationFrame(() => {
+    sizeFrame = 0;
+    const height = Math.ceil(shell.getBoundingClientRect().height);
+    if (height !== lastHeight) { lastHeight = height; rc.reportW2Height(height); }
+  });
+}
+function measureDetail() {
+  const height = Math.min($('detail').getBoundingClientRect().height, 260, Math.floor(availableHeight * .4));
+  $('detailSection').style.setProperty('--detail-height', `${height}px`);
+}
+new ResizeObserver(reportHeight).observe(shell);
+new ResizeObserver(measureDetail).observe($('detail'));
+rc.onW2Layout(({ maxHeight }) => {
+  availableHeight = maxHeight;
+  shell.style.setProperty('--available-height', `${maxHeight}px`);
+  measureDetail();
+  reportHeight();
+});
+rc.w2Ready();
 
 // —— 提示：浮现后自动消失 ——
 let toastTimer = null;
@@ -30,6 +56,7 @@ function refreshBlock() {
   const el = document.activeElement;
   const typing = !!el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
   rc.setBlock(App.newMode || TaskDialog.isOpen() || Settings.isOpen() || typing);
+  shell.classList.toggle('editing', (TaskDialog.isOpen() && !TaskDialog.confirmOpen()) || Settings.isOpen());
 }
 document.addEventListener('focusin', refreshBlock);
 document.addEventListener('focusout', () => setTimeout(refreshBlock, 0));
@@ -39,9 +66,8 @@ function render() {
   if (!s) return;
   if (!App.view) { const t = D.parse(s.today); App.view = { y: t.getFullYear(), m: t.getMonth() }; }
   const { y, m } = App.view;
-  $('title').innerHTML = `${m + 1}<span class="month-unit">月</span>`;
-  $('monthKicker').textContent = `${y} / ${MONTHS[m]}`;
-  cal.innerHTML = K.monthHTML({ year: y, month: m, tasks: s.tasks, today: s.today, barH: BAR_H, fontSize: FONT });
+  $('monthLabel').textContent = `${y} 年 ${m + 1} 月`;
+  cal.innerHTML = K.monthHTML({ year: y, month: m, tasks: s.tasks, today: s.today, barH: BAR_H, fontSize: FONT, barRadius: 999 });
   cal.querySelectorAll('.cal-dc').forEach(cell => {
     cell.innerHTML = `<span class="date-number">${cell.textContent}</span>`;
     if (cell.dataset.date === s.today) cell.setAttribute('aria-current', 'date');
@@ -56,7 +82,6 @@ function render() {
   });
   const first = D.toStr(new Date(y, m, 1)), last = D.toStr(new Date(y, m + 1, 0));
   const monthTasks = s.tasks.filter(t => t.endDate >= first && t.startDate <= last);
-  $('monthCount').innerHTML = `本月 <strong>${monthTasks.length}</strong> 项日程`;
   $('empty').hidden = monthTasks.length > 0;
   if (App.selectedId && !s.tasks.some(t => t.id === App.selectedId)) App.selectedId = null;
   K.markBars(cal, 'sel', App.selectedId);
@@ -71,22 +96,65 @@ function renderDetail() {
   const s = App.state, id = App.selectedId || App.hoverId;
   const t = id && s.tasks.find(x => x.id === id);
   const box = $('detail');
+  const section = $('detailSection');
   const actions = $('detailActions');
-  actions.hidden = !t || App.selectedId !== t.id;
+  if (!t) {
+    shownDetailId = null;
+    section.classList.remove('show');
+    section.setAttribute('aria-hidden', 'true');
+    // 保留内容直到收起完成，避免先清空内容导致动画跳变。
+    section.inert = true;
+    return;
+  }
+
+  const changed = shownDetailId && shownDetailId !== t.id;
+  shownDetailId = t.id;
+  box.classList.remove('swap');
+  box.classList.toggle('selected', App.selectedId === t.id);
+  box.innerHTML = `<div class="detail-title">${K.esc(t.title)}</div>`
+    + `<div class="detail-meta">${D.rangeText(t.startDate, t.endDate)} · ${D.progressText(t, s.today)}</div>`
+    + (t.note ? `<div class="detail-note">${K.esc(t.note)}</div>` : '');
+  const tone = toneOf(t.done ? '#C3CCD2' : t.color);
+  if (tone) {
+    box.style.setProperty('--tone-bg', tone.bg);
+    box.style.setProperty('--tone-ink', tone.ink);
+    box.style.setProperty('--tone-soft', tone.soft);
+    actions.style.setProperty('--tone-ink', tone.ink);
+  }
+
+  actions.hidden = App.selectedId !== t.id;
   actions.innerHTML = '';
-  $('detailSection').hidden = !t;
-  if (!t) { box.hidden = true; box.innerHTML = ''; return; }
-  $('detailLabel').textContent = App.selectedId ? '日程详情' : '日程预览';
-  $('clearSelectionBtn').hidden = !App.selectedId;
-  box.innerHTML = K.detailHTML(t, s.today);
-  if (t.pinned) box.querySelector('.dt-title').insertAdjacentHTML('beforeend', '<span class="dt-pin">置顶</span>');
   if (App.selectedId === t.id) {
-    actions.innerHTML = '<button type="button" data-act="edit">编辑</button>'
-      + `<button type="button" data-act="done">${t.done ? '取消完成' : '完成'}</button>`
-      + `<button type="button" data-act="pin">${t.pinned ? '取消置顶' : '置顶'}</button>`
-      + '<button type="button" data-act="delete" class="danger">删除</button>';
+    actions.innerHTML = '<button type="button" data-act="edit" title="编辑" aria-label="编辑"><svg viewBox="0 0 24 24"><path d="m15 5 4 4M5 19l1.2-4.2 8.5-8.5 3 3-8.5 8.5L5 19Z"/></svg></button>'
+      + `<button type="button" data-act="done" class="${t.done ? 'on' : ''}" title="${t.done ? '取消完成' : '完成'}" aria-label="${t.done ? '取消完成' : '完成'}"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7"/></svg></button>`
+      + '<button type="button" data-act="delete" class="danger" title="删除" aria-label="删除"><svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V4.8h4V7M7.5 7l.9 12.2h7.2L16.5 7"/></svg></button>';
   }
   box.hidden = false;
+  measureDetail();
+  section.classList.add('show');
+  section.setAttribute('aria-hidden', 'false');
+  section.inert = false;
+  if (changed) {
+    void box.offsetWidth;
+    box.classList.add('swap');
+  }
+}
+
+// 从日程条颜色推导详情卡的浅底、标题色和说明文字色。
+function toneOf(color) {
+  const hex = String(color || '').trim().replace('#', '');
+  const full = hex.length === 3 ? hex.split('').map(c => c + c).join('') : hex;
+  const n = parseInt(full, 16);
+  if (full.length !== 6 || Number.isNaN(n)) return null;
+  const r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  let h = 0;
+  if (d) h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  h = Math.round(h * 60);
+  const l = (max + min) / 2;
+  const s = d ? d / (1 - Math.abs(2 * l - 1)) : 0;
+  const sat = Math.round(Math.min(Math.max(s, .16), .6) * 100);
+  return { bg: `hsl(${h} ${Math.round(sat * .9)}% 95%)`, ink: `hsl(${h} ${sat}% 32%)`, soft: `hsl(${h} ${Math.round(sat * .75)}% 45%)` };
 }
 
 $('detailActions').addEventListener('click', async e => {
@@ -97,7 +165,6 @@ $('detailActions').addEventListener('click', async e => {
   if (act === 'edit') TaskDialog.open({ mode: 'edit', task: t });
   else if (act === 'delete') TaskDialog.confirmDelete(t);
   else if (act === 'done') report(await rc.updateTask(t.id, { done: !t.done }), t.done ? '已取消完成' : '已标记完成');
-  else if (act === 'pin') report(await rc.updateTask(t.id, { pinned: !t.pinned }), t.pinned ? '已取消置顶' : '已置顶');
 });
 
 // 提醒栏：列出还没确认的提醒，逐条点「知道了」
@@ -112,8 +179,10 @@ function layoutReminders(animate = false) {
   })) : [];
   reminderAnimations.forEach(animation => animation.cancel());
   reminderAnimations = [];
+  if (cards.length < 2) remindersExpanded = false;
   section.classList.remove('is-animating');
   section.classList.toggle('expanded', remindersExpanded);
+  box.style.setProperty('--peek', cards.length > 2 ? '15px' : cards.length === 2 ? '8px' : '0px');
   cards.forEach((card, index) => {
     const depth = (index - reminderIndex + cards.length) % cards.length;
     card.classList.remove('deck-0', 'deck-1', 'deck-2');
@@ -159,15 +228,14 @@ function renderReminders() {
   box.hidden = !items.length;
   $('reminderSection').hidden = !items.length;
   if (!items.length) { remindersExpanded = false; reminderIndex = 0; box.innerHTML = ''; layoutReminders(); return; }
+  $('reminderHead').textContent = `待确认提醒 ${items.length} 条`;
   reminderIndex = Math.max(0, Math.min(reminderIndex, items.length - 1));
   box.innerHTML = items.map((r, index) => {
     const t = byId.get(r.taskId);
-    return `<article class="rm-item" data-index="${index}" data-rid="${K.esc(r.id)}"><i class="rm-dot" style="background:${t.color}"></i>`
+    return `<article class="rm-item" data-index="${index}" data-rid="${K.esc(r.id)}" tabindex="0">`
       + `<span class="rm-title">${K.esc(t.title)}</span>`
       + `<span class="rm-reason">${K.reminderReason(r.kind, t, s.today)}</span>`
-      + `<div class="rm-bottom"><span class="rm-date">${D.rangeText(t.startDate, t.endDate)}</span>`
-      + `<button type="button" class="rm-ok" data-rid="${K.esc(r.id)}" aria-label="确认提醒：${K.esc(t.title)}">知道了</button></div>`
-      + `<span class="reminder-count" aria-label="第 ${index + 1} 条，共 ${items.length} 条提醒">${index + 1} / ${items.length}</span></article>`;
+      + `<div class="rm-bottom"><button type="button" class="rm-ok" data-rid="${K.esc(r.id)}" aria-label="确认提醒：${K.esc(t.title)}">知道了</button></div></article>`;
   }).join('');
   layoutReminders();
 }
@@ -196,6 +264,15 @@ $('reminders').addEventListener('wheel', e => {
   reminderIndex = (reminderIndex + (e.deltaY > 0 ? 1 : -1) + cards.length) % cards.length;
   layoutReminders(true);
 }, { passive: false });
+
+$('reminders').addEventListener('keydown', e => {
+  const card = e.target.closest('.rm-item');
+  if (!card || e.target.closest('.rm-ok') || (e.key !== 'Enter' && e.key !== ' ')) return;
+  e.preventDefault();
+  reminderIndex = +card.dataset.index;
+  remindersExpanded = !remindersExpanded;
+  layoutReminders(true);
+});
 
 function setHover(id) {
   if (id === App.hoverId) return;
@@ -361,8 +438,19 @@ cal.addEventListener('keydown', e => {
     if (!App.newMode) select(bar.dataset.id);
   }
 });
+cal.addEventListener('click', e => {
+  if (App.newMode) return;
+  const bar = e.target.closest('.cal-bar');
+  if (bar) select(bar.dataset.id);
+});
 
-// —— 顶部栏 ——
+// 点选日程后，点主界面的其他区域就收起详情；详情里的操作按钮不触发收起。
+document.addEventListener('click', e => {
+  if (!App.selectedId || e.target.closest('.cal-bar') || e.target.closest('.detail-section') || e.target.closest('.overlay') || e.target.closest('.page')) return;
+  select(null);
+});
+
+// —— 月份与快捷操作 ——
 $('prevBtn').addEventListener('click', () => shiftMonth(-1));
 $('nextBtn').addEventListener('click', () => shiftMonth(1));
 $('todayBtn').addEventListener('click', goToday);
@@ -370,7 +458,6 @@ $('newBtn').addEventListener('click', newTask);
 $('emptyNewBtn').addEventListener('click', newTask);
 $('rangeBtn').addEventListener('click', enterNewMode);
 $('cancelRangeBtn').addEventListener('click', exitNewMode);
-$('clearSelectionBtn').addEventListener('click', () => select(null));
 $('settingsBtn').addEventListener('click', () => Settings.open());
 $('closeBtn').addEventListener('click', () => rc.hideW2());
 

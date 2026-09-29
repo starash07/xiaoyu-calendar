@@ -42,9 +42,13 @@ function previewApi(settings) {
     }
   };
   const ok = () => ({ ok: true });
+  let layoutListener = () => {};
+  const layout = () => layoutListener({ maxHeight: Math.max(160, innerHeight - 36) });
+  addEventListener('resize', layout);
   window.rc = {
     getState: async () => structuredClone(state),
     onState: fn => { listeners.push(fn); }, onCommand: () => {},
+    onW2Layout: fn => { layoutListener = fn; }, w2Ready: layout, reportW2Height: () => {},
     setBlock: () => {}, w2Drag: () => {}, previewAppearance: () => {},
     hideW2: () => window.W2App.toast('这是交互预览，关闭此标签页即可退出'),
     createTask: async task => {
@@ -75,8 +79,9 @@ function previewApi(settings) {
 
 function build() {
   let html = fs.readFileSync(path.join(renderer, 'index.html'), 'utf8');
-  html = html.replace('<title>日程挂件</title>', '<title>日程 · 主界面交互预览</title>');
+  html = html.replace('<title>小鱼日程表</title>', '<title>小鱼日程表 · 主界面交互预览</title>');
   html = html.replace('把日子安排好', '交互预览 · 数据不保存');
+  html = html.replace('</head>', '<style>html { background: #eaf1f5; } body { width: min(480px, calc(100% - 32px)); margin: 18px auto; overflow: visible; }</style></head>');
   html = html.replace(/<link rel="stylesheet" href="([^"]+)">/g, (_, file) => `<style>${fs.readFileSync(path.resolve(renderer, file), 'utf8')}</style>`);
   html = html.replace(/<script src="([^"]+)"><\/script>/g, (_, file) => {
     const bridge = file === 'w2.js' ? `<script>(${previewApi.toString()})(${JSON.stringify(DEFAULT_SETTINGS)});</script>` : '';

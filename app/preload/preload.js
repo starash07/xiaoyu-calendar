@@ -22,6 +22,9 @@ contextBridge.exposeInMainWorld('rc', {
   resetW1: () => ipcRenderer.invoke('w1:reset'),
 
   // W2 下拉窗
+  w2Ready: () => ipcRenderer.send('w2:ready'),
+  onW2Layout: on('w2:layout'),
+  reportW2Height: height => ipcRenderer.send('w2:height', height),
   onCommand: on('w2:cmd'),
   w2Drag: () => ipcRenderer.send('w2:drag'),
   setBlock: blocked => ipcRenderer.send('w2:block', blocked),

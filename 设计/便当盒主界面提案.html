@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>小鱼日程表 · 便当盒主界面提案</title>
+  <title>小鱼日程表 · 月历留白调整</title>
   <style>
     :root {
       color-scheme: light;
@@ -29,12 +29,15 @@
     }
 
     * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
     html, body { margin: 0; min-height: 100%; }
     body {
       min-height: 100vh;
-      display: grid;
-      place-items: start center;
-      padding: 18px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 18px 12px;
       overflow: auto;
       background:
         radial-gradient(circle at 18% 8%, #ffffff 0 3%, transparent 22%),
@@ -46,10 +49,18 @@
     button { font: inherit; color: inherit; cursor: pointer; }
     button:focus-visible, [tabindex]:focus-visible { outline: 2px solid #5f93b6; outline-offset: 2px; }
 
+    /* 仅用于比较布局的预览工具，位于软件卡片之外。 */
+    .preview-tools { width: min(480px, 100%); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex: 0 0 auto; }
+    .density-options { display: flex; gap: 3px; padding: 3px; border-radius: 10px; background: #dfe9ee; }
+    .density-options button { padding: 5px 10px; border: 0; border-radius: 7px; background: transparent; color: #6b8596; font-size: 11px; }
+    .density-options button[aria-pressed="true"] { background: #fff; color: #315873; }
+    .preview-tools select { min-height: 30px; padding: 0 7px; border: 0; border-radius: 8px; background: #f8fbfc; color: #6b8596; font: inherit; font-size: 11px; }
+
     .app {
-      width: min(480px, 100vw);
+      width: min(var(--preview-width, 480px), 100%);
       height: auto;
-      max-height: calc(100vh - 36px);
+      max-height: calc(100vh - 82px);
+      flex: 0 0 auto;
       padding-bottom: 16px;
       display: flex;
       flex-direction: column;
@@ -92,17 +103,18 @@
       flex-direction: column;
       overflow-y: auto;
       overflow-x: hidden;
-      padding: 14px 16px 4px;
+      scrollbar-gutter: stable;
+      padding: 16px 18px 4px;
       scrollbar-width: thin;
       scrollbar-color: #cbdce5 transparent;
     }
     .content::-webkit-scrollbar { width: 5px; }
     .content::-webkit-scrollbar-thumb { border-radius: 4px; background: #cbdce5; }
 
-    /* 提醒：浅杏底卡片，文字左对齐，不用整条重色；下层卡片露出边缘，右上角标数量。 */
+    /* 提醒：浅杏底卡片，收起时只露出下层边缘。 */
     .reminder-head { margin: 0 2px 5px; color: #7c5c46; font-size: 10px; }
     .reminder-head b { font-weight: 600; }
-    .reminder-deck { flex: 0 0 auto; position: relative; height: calc(48px + var(--peek, 15px)); margin: 0 0 12px; }
+    .reminder-deck { flex: 0 0 auto; position: relative; height: calc(48px + var(--peek, 15px)); margin: 0 0 20px; }
     .reminder-card {
       position: absolute;
       inset: 0 0 auto;
@@ -132,48 +144,47 @@
     .reminder-deck.expanded .reminder-card { position: relative; opacity: 1; transform: none; }
     .reminder-deck.expanded .reminder-card > * { opacity: 1; }
 
-    /* 月历高度随当月周数和每周条数变化，并吃掉窗口剩下的空间。 */
+    /* 空白周保留适量留白；日程超过基础高度时，再按实际条数增高。 */
     .calendar-card {
       width: 100%;
-      flex: 1 0 auto;
+      flex: 0 0 auto;
       display: flex;
       flex-direction: column;
-      padding: 10px 0 4px;
+      padding: 10px 0 8px;
       border-radius: 14px;
       background: transparent;
     }
     .weekdays {
-      height: 20px;
+      height: 22px;
       flex: 0 0 auto;
-      margin-bottom: 7px;
+      margin-bottom: 8px;
       display: grid;
       grid-template-columns: repeat(7, 1fr);
       align-items: start;
       color: #9db0bc;
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 600;
       letter-spacing: 2px;
       text-indent: 2px;
       text-align: center;
     }
     .weekdays span:nth-child(n+6) { color: #b3c3cd; }
-    .month-grid { flex: 1 0 auto; display: flex; flex-direction: column; }
-    /* 行高随当周实际条数变化：没有日程的那一周只有日期行 */
-    .week { flex: 1 0 auto; position: relative; border-top: 1px solid var(--line); padding-bottom: 9px; }
-    .dates { height: 26px; display: grid; grid-template-columns: repeat(7, 1fr); align-items: center; }
+    .month-grid { flex: 0 0 auto; display: flex; flex-direction: column; }
+    .week { flex: 0 0 auto; min-height: var(--week-height, 58px); position: relative; border-top: 1px solid #eaf0f3; padding: 3px 0 8px; }
+    .dates { height: 28px; display: grid; grid-template-columns: repeat(7, 1fr); align-items: center; }
     .day {
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 26px;
+      height: 28px;
       color: #31597a;
-      font: 16px/1 Bahnschrift, "Segoe UI", "Microsoft YaHei UI", sans-serif;
+      font: 17px/1 Bahnschrift, "Segoe UI", "Microsoft YaHei UI", sans-serif;
       font-variant-numeric: tabular-nums;
     }
     .day.weekend { color: var(--weekend); }
     .day.out { color: #c3cfd6; }
-    .day.today span { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: var(--today-bg); color: var(--today); font-weight: 600; }
-    .event-layer { position: relative; margin-top: 9px; height: calc(var(--lanes, 1) * 20px - 5px); pointer-events: none; }
+    .day.today span { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: var(--today-bg); color: var(--today); font-weight: 600; }
+    .event-layer { position: relative; margin-top: 6px; height: calc(var(--lanes, 1) * 20px - 5px); pointer-events: none; }
     .event {
       --start: 0;
       --span: 1;
@@ -234,7 +245,7 @@
     /* 月份和操作全部在月历下方。 */
     /* 固定在窗口底部，不跟着内容滚动：日程多的时候也能直接点「新建日程」 */
     /* 底栏：一条药丸形的月份切换 + 回到今天 + 新建日程 */
-    .bottom-bar { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; margin: 10px 16px 0; }
+    .bottom-bar { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; margin: 14px 18px 0; }
     .month-pill {
       flex: 1;
       min-width: 0;
@@ -258,27 +269,35 @@
     .today-button:active, .new-button:active { transform: translateY(1px); }
     .new-button span { margin-right: 5px; font-size: 14px; font-weight: 400; }
 
-    @media (max-width: 420px) {
-      .app { border-radius: 12px; }
-      .content { padding-left: 12px; padding-right: 12px; }
-      .bottom-bar, .detail-slot { margin-left: 12px; margin-right: 12px; }
-      /* 窄窗口下按钮收紧，把宽度让给月份，别让它被截成「2026 年 9…」 */
-      .today-button, .new-button { padding: 0 12px; }
-      .month-pill { padding: 0 2px; }
-      .prototype { display: none; }
-      .calendar-card { padding-left: 7px; padding-right: 7px; }
-    }
+    .app.narrow { border-radius: 12px; }
+    .app.narrow .content { padding-left: 14px; padding-right: 14px; }
+    .app.narrow .bottom-bar, .app.narrow .detail-slot { margin-left: 14px; margin-right: 14px; }
+    .app.narrow .today-button, .app.narrow .new-button { padding: 0 12px; }
+    .app.narrow .month-pill { padding: 0 2px; }
+    .app.narrow .prototype { display: none; }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { transition: none !important; animation: none !important; }
     }
   </style>
 </head>
 <body>
+  <nav class="preview-tools" aria-label="布局预览选项">
+    <div class="density-options" aria-label="示例日程数量">
+      <button type="button" data-density="sparse" aria-pressed="false">1 条日程</button>
+      <button type="button" data-density="overlap" aria-pressed="true">2–3 条叠放</button>
+      <button type="button" data-density="many" aria-pressed="false">多条日程</button>
+      <button type="button" data-density="empty" aria-pressed="false">无日程</button>
+    </div>
+    <select id="previewWidth" aria-label="预览宽度">
+      <option value="480">宽度 480</option>
+      <option value="400">宽度 400</option>
+    </select>
+  </nav>
   <main class="app" aria-label="小鱼日程表主界面设计提案">
     <header class="topbar">
       <span class="fish-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
       <span class="brand">小鱼日程表</span>
-      <span class="prototype">便当盒提案</span>
+      <span class="prototype">月历留白调整</span>
       <span class="spacer"></span>
       <button class="icon-button" type="button" aria-label="设置" title="设置">
         <svg viewBox="0 0 24 24"><path d="M4 7h10m4 0h2M4 17h2m4 0h10M14 4v6M6 14v6"/></svg>
@@ -317,10 +336,10 @@
           </div>
           <div class="week">
             <div class="dates"><div class="day">7</div><div class="day">8</div><div class="day">9</div><div class="day">10</div><div class="day">11</div><div class="day weekend">12</div><div class="day weekend">13</div></div>
-            <div class="event-layer" style="--lanes:1"><button class="event" style="--start:0;--span:4;--lane:0;--event-color:#a8d9c5" data-title="项目方案整理" data-date="9月7日—9月10日" data-note="把需求、交互和剩余问题整理成一份清单。" data-color="#73bfa1">项目方案整理</button><button class="event" style="--start:5;--span:2;--lane:0;--event-color:#f6c9ad" data-title="和朋友吃饭" data-date="9月12日" data-note="晚餐，出发前确认餐厅。" data-color="#efad81">和朋友吃饭</button></div>
+            <div class="event-layer" style="--lanes:2"><button class="event" style="--start:0;--span:4;--lane:0;--event-color:#a8d9c5" data-title="项目方案整理" data-date="9月7日—9月10日" data-note="把需求、交互和剩余问题整理成一份清单。" data-color="#73bfa1">项目方案整理</button><button class="event" style="--start:5;--span:2;--lane:0;--event-color:#f6c9ad" data-title="和朋友吃饭" data-date="9月12日" data-note="晚餐，出发前确认餐厅。" data-color="#efad81">和朋友吃饭</button><button class="event" style="--start:2;--span:3;--lane:1;--event-color:#c8c2e9" data-title="资料核对" data-date="9月9日—9月11日" data-note="把材料逐项核对，周五前确认。" data-color="#aaa2dc">资料核对</button></div>
           </div>
           <div class="week">
-            <div class="dates"><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day today"><span>18</span></div><div class="day weekend">19</div><div class="day weekend">20</div></div>
+            <div class="dates"><div class="day">14</div><div class="day">15</div><div class="day">16</div><div class="day">17</div><div class="day">18</div><div class="day weekend">19</div><div class="day weekend">20</div></div>
             <div class="event-layer" style="--lanes:3"><button class="event" style="--start:0;--span:7;--lane:0;--event-color:#abd5e8" data-title="新界面设计" data-date="9月14日—9月20日" data-note="主界面改成便当盒结构，行高随当周日程条数变化。" data-color="#78b8db">新界面设计</button><button class="event" style="--start:2;--span:3;--lane:1;--event-color:#c8c2e9" data-title="双周迭代 S12" data-date="9月16日—9月18日" data-note="评审放在周五上午。" data-color="#aaa2dc">双周迭代 S12</button><button class="event" style="--start:3;--span:1;--lane:2;--event-color:#f4c9d6" data-title="体检" data-date="9月17日" data-note="空腹，8:30 前到。" data-color="#e79ab0">体检</button><button class="event" style="--start:4;--span:1;--lane:2;--event-color:#f4d58a" data-title="团建" data-date="9月18日" data-note="下午出发，记得带外套。" data-color="#e6bd5e">团建</button></div>
           </div>
           <div class="week">
@@ -328,7 +347,7 @@
             <div class="event-layer" style="--lanes:1"><button class="event" style="--start:3;--span:3;--lane:0;--event-color:#a8d9c5" data-title="完成本月复盘" data-date="9月24日—9月26日" data-note="回顾本月完成的事项和下月计划。" data-color="#73bfa1">完成本月复盘</button></div>
           </div>
           <div class="week">
-            <div class="dates"><div class="day">28</div><div class="day">29</div><div class="day">30</div><div class="day out">1</div><div class="day out">2</div><div class="day out weekend">3</div><div class="day out weekend">4</div></div>
+            <div class="dates"><div class="day">28</div><div class="day today"><span>29</span></div><div class="day">30</div><div class="day out">1</div><div class="day out">2</div><div class="day out weekend">3</div><div class="day out weekend">4</div></div>
           </div>
         </div>
       </section>
@@ -380,6 +399,11 @@
     const detailCard = document.querySelector('.detail-card');
     const detailActions = document.getElementById('detailActions');
     const reminderHead = document.getElementById('reminderHead');
+    const app = document.querySelector('.app');
+    const reminderSamples = deck.innerHTML;
+    const eventSamples = [...calendar.querySelectorAll('.event')].map(bar => ({ bar, lane: bar.style.getPropertyValue('--lane') }));
+    const primaryBar = calendar.querySelector('[data-title="团建"]');
+    const overlapTitles = new Set(['项目方案整理', '资料核对', '新界面设计', '双周迭代 S12', '团建', '完成本月复盘']);
     let locked = null;
 
     let shownBar = null;
@@ -438,7 +462,8 @@
 
     function updateReminderCount() {
       const n = deck.children.length;
-      if (!n) { reminderHead.remove(); deck.remove(); return; }
+      reminderHead.hidden = deck.hidden = !n;
+      if (!n) return;
       reminderHead.querySelector('b').textContent = `待确认提醒 ${n} 条`;
       // 下面露出来的半张卡占多高，由后面还压着几张决定
       deck.style.setProperty('--peek', n > 2 ? '15px' : n === 2 ? '8px' : '0px');
@@ -452,6 +477,7 @@
     calendar.addEventListener('pointerover', event => {
       const bar = event.target.closest('.event');
       if (bar && !locked) showDetail(bar);
+      else if (!bar && !locked) hideDetail();
     });
     calendar.addEventListener('pointerleave', hideDetail);
     calendar.addEventListener('click', event => {
@@ -488,6 +514,40 @@
       if (event.deltaY > 0) deck.append(deck.firstElementChild);
       else deck.prepend(deck.lastElementChild);
     }, { passive: false });
+
+    function previewDensity(mode) {
+      locked = null;
+      hideDetail();
+      eventSamples.forEach(({ bar, lane }) => {
+        bar.classList.remove('locked');
+        bar.hidden = mode === 'empty' || (mode === 'sparse' && bar !== primaryBar)
+          || (mode === 'overlap' && !overlapTitles.has(bar.dataset.title));
+        bar.style.setProperty('--lane', mode === 'sparse' ? '0' : lane);
+      });
+      calendar.querySelectorAll('.event-layer').forEach(layer => {
+        const visible = [...layer.querySelectorAll('.event')].filter(bar => !bar.hidden);
+        layer.hidden = !visible.length;
+        layer.style.setProperty('--lanes', visible.length ? Math.max(...visible.map(bar => +bar.style.getPropertyValue('--lane'))) + 1 : 0);
+      });
+      deck.innerHTML = mode === 'many' ? reminderSamples : mode === 'empty' ? '' :
+        '<article class="reminder-card" tabindex="0"><div class="reminder-title">团建</div><div class="reminder-reason">已开始</div><button class="reminder-ok" type="button">知道了</button></article>';
+      collapseDeck();
+      updateReminderCount();
+      document.querySelectorAll('[data-density]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.density === mode)));
+      document.querySelector('.content').scrollTop = 0;
+    }
+    document.querySelector('.density-options').addEventListener('click', event => {
+      const button = event.target.closest('[data-density]');
+      if (button) previewDensity(button.dataset.density);
+    });
+    document.getElementById('previewWidth').addEventListener('change', event => {
+      app.style.setProperty('--preview-width', `${event.target.value}px`);
+    });
+    new ResizeObserver(() => app.classList.toggle('narrow', app.clientWidth <= 420)).observe(app);
+    new ResizeObserver(() => {
+      calendar.style.setProperty('--week-height', `${Math.max(56, Math.round(calendar.clientWidth * .135))}px`);
+    }).observe(calendar);
+    previewDensity('overlap');
   </script>
 </body>
 </html>

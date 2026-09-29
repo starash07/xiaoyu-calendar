@@ -6,6 +6,7 @@ const W = require('./win32');
 const P = require('./paths');
 
 const SNAP = 20, STRIP = 3, LEAVE_MS = 500;
+const MIN_HEIGHT = 160;
 const easeOut = k => 1 - Math.pow(1 - k, 3);   // 滑出：先快后慢
 const easeIn = k => k * k * k;                 // 收起：先慢后快
 
@@ -21,6 +22,10 @@ class W2 {
     this.anim = null;
     this.leaveSince = 0;
     this.quitting = false;
+    this.contentHeight = null;
+    this.maxHeight = null;
+    this.settingBounds = false;
+    this.managedBounds = null;
   }
 
   create(firstRun) {
@@ -29,7 +34,7 @@ class W2 {
     this.dock = s.dock || null;
     if (this.dock) this.dockDisplayId = screen.getDisplayMatching(b).id;
     const win = this.win = new BrowserWindow({
-      ...b, minWidth: 380, minHeight: 460, frame: false, transparent: true, hasShadow: true, resizable: true, skipTaskbar: true, show: false,
+      ...b, minWidth: 380, minHeight: MIN_HEIGHT, frame: false, transparent: true, hasShadow: true, resizable: true, skipTaskbar: true, show: false,
       alwaysOnTop: !!this.dock, backgroundColor: '#00000000',
       webPreferences: { preload: P.PRELOAD, backgroundThrottling: false },
     });
@@ -39,18 +44,62 @@ class W2 {
       if (firstRun) { win.show(); return; }                 // 第一次启动：屏幕中央浮动显示
       if (this.dock) {                                     // 上次吸附着：启动后收在边上
         this.collapsed = true;
-        win.setBounds(this.dockBounds(true));
+        this.setBounds(this.dockBounds(true));
         win.showInactive();
       }                                                    // 上次是浮动：先隐藏，从托盘唤出
     });
     win.on('close', e => { if (!this.quitting) { e.preventDefault(); this.hide(); } });
-    win.on('moved', () => this.afterMove());               // 用户拖完标题栏
-    win.on('resized', () => this.saveBounds());
+    win.on('moved', () => { if (!this.isManagedChange()) this.afterMove(); });
+    win.on('resized', () => {
+      if (this.isManagedChange()) return;
+      this.updateLayoutLimit();
+      this.resizeToContent();
+      this.saveBounds();
+    });
     this.pollTimer = setInterval(() => this.poll(), 100);
   }
 
   send(channel, data) {
     if (this.win && !this.win.isDestroyed()) this.win.webContents.send(channel, data);
+  }
+
+  // 程序调整高度不能触发保存和全量重绘，否则悬停动画会被自己的 resize 打断。
+  setBounds(bounds) {
+    this.settingBounds = true;
+    try {
+      this.win.setBounds(bounds);
+      this.managedBounds = this.win.getBounds();
+    } finally { this.settingBounds = false; }
+  }
+
+  isManagedChange() {
+    if (this.settingBounds) return true;
+    const b = this.win.getBounds(), m = this.managedBounds;
+    return m && ['x', 'y', 'width', 'height'].every(k => b[k] === m[k]);
+  }
+
+  updateLayoutLimit(force = false) {
+    if (!this.win || this.win.isDestroyed()) return;
+    const b = this.win.getBounds();
+    const wa = this.dock ? this.dockArea() : screen.getDisplayMatching(b).workArea;
+    const top = this.dock === 'top' ? wa.y : Math.max(wa.y, b.y);
+    const maxHeight = Math.max(MIN_HEIGHT, wa.y + wa.height - top);
+    if (force || maxHeight !== this.maxHeight) {
+      this.maxHeight = maxHeight;
+      this.send('w2:layout', { maxHeight });
+    }
+    this.resizeToContent();
+  }
+
+  resizeToContent(height = this.contentHeight) {
+    if (!Number.isFinite(height) || height <= 0 || !this.win || this.win.isDestroyed()) return;
+    this.contentHeight = Math.ceil(height);
+    // 滑出/收起先完成位置动画，再应用期间最新的内容高度。
+    if (this.anim || this.dragging) return;
+    const b = this.win.getBounds();
+    const h = Math.max(MIN_HEIGHT, Math.min(this.contentHeight, this.maxHeight || 1000));
+    const y = this.dock === 'top' && this.collapsed ? this.dockArea().y - h + STRIP : b.y;
+    if (b.height !== h || b.y !== y) this.setBounds({ ...b, height: h, y });
   }
 
   initialBounds(s) {
@@ -106,11 +155,11 @@ class W2 {
     const from = this.win.getBounds(), t0 = Date.now();
     this.anim = setInterval(() => {
       const k = Math.min(1, (Date.now() - t0) / ms), e = ease(k);
-      this.win.setBounds({
+      this.setBounds({
         x: Math.round(from.x + (target.x - from.x) * e), y: Math.round(from.y + (target.y - from.y) * e),
         width: from.width, height: from.height,
       });
-      if (k >= 1) { clearInterval(this.anim); this.anim = null; }
+      if (k >= 1) { clearInterval(this.anim); this.anim = null; this.resizeToContent(); }
     }, 10);
   }
 
@@ -147,11 +196,12 @@ class W2 {
       this.dock = hit.edge;
       this.dockDisplayId = hit.displayId;
       this.win.setAlwaysOnTop(true);
-      this.win.setBounds(this.dockBounds(false));
+      this.setBounds(this.dockBounds(false));
     } else if (this.dock) {
       this.dock = null;
       this.win.setAlwaysOnTop(false);   // 浮动时不置顶（待确认），可以被其他窗口遮挡
     }
+    this.updateLayoutLimit();
     this.saveBounds();
   }
 
@@ -176,7 +226,7 @@ class W2 {
         return;
       }
       const c = screen.getCursorScreenPoint();
-      this.win.setBounds({ x: b0.x + c.x - start.x, y: b0.y + c.y - start.y, width: b0.width, height: b0.height });
+      this.setBounds({ x: b0.x + c.x - start.x, y: b0.y + c.y - start.y, width: b0.width, height: b0.height });
     }, 16);
   }
 
@@ -184,6 +234,7 @@ class W2 {
 
   show() {
     if (!this.win) return;
+    this.updateLayoutLimit(true);
     if (this.dock) { if (!this.win.isVisible()) this.win.showInactive(); this.expand(); }
     else this.win.show();
     this.win.focus();

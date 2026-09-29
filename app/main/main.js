@@ -77,6 +77,8 @@ function start() {
   ipcMain.handle('w1:pin', (e, pinned) => { const r = w1.setPinned(!!pinned); broadcast(); return r; });
   ipcMain.handle('w1:reset', () => w1.resetPosition());
   ipcMain.on('w2:drag', () => w2.dragStart());
+  ipcMain.on('w2:ready', e => { if (e.sender === w2.win.webContents) w2.updateLayoutLimit(true); });
+  ipcMain.on('w2:height', (e, height) => { if (e.sender === w2.win.webContents) w2.resizeToContent(height); });
   ipcMain.on('w2:block', (e, blocked) => { w2.blocked = !!blocked; });
   ipcMain.on('w2:hide', () => w2.hide());
   ipcMain.handle('task:create', (e, t) => store.createTask(t));
@@ -101,9 +103,9 @@ function start() {
   setInterval(check, 60 * 1000);
 
   // —— 屏幕变化：挂件跑到屏幕外就移回主显示器 ——
-  screen.on('display-removed', () => w1.ensureOnScreen(true));
-  screen.on('display-metrics-changed', () => { w1.ensureOnScreen(true); w1.place(); w1.sendInfo(); });
-  screen.on('display-added', () => w1.sendInfo());
+  screen.on('display-removed', () => { w1.ensureOnScreen(true); w2.updateLayoutLimit(true); });
+  screen.on('display-metrics-changed', () => { w1.ensureOnScreen(true); w1.place(); w1.sendInfo(); w2.updateLayoutLimit(true); });
+  screen.on('display-added', () => { w1.sendInfo(); w2.updateLayoutLimit(true); });
 
   app.on('second-instance', () => w2.show());   // 重复启动：唤出已经在运行的下拉窗
   app.on('window-all-closed', () => { /* 常驻托盘，不因为窗口都关了就退出 */ });
