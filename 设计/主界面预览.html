@@ -27,7 +27,7 @@
 </style>
 <style>:root {
   color-scheme: light;
-  --bg: #fbfcfc;
+  --bg: #ffffff;
   --surface: #ffffff;
   --field: #fbfdff;
   --fg: #315873;
@@ -42,7 +42,8 @@
   --accent-soft: #fff0ed;
   --today: #4e957f;
   --today-bg: #e3f2ec;
-  --weekend: #8aa3b3;
+  --weekend: #8a70d6;
+  --weekend-out: #b7acd7;
   --done-bg: #e7ecee;
   --done-fg: #8b98a1;
   --danger: #c0575c;
@@ -91,7 +92,7 @@ button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke
   gap: 9px;
   padding: 0 15px;
   border-bottom: 1px solid var(--rule);
-  background: rgba(255, 255, 255, .76);
+  background: var(--surface);
   -webkit-app-region: drag;
 }
 .top button { -webkit-app-region: no-drag; }
@@ -118,11 +119,14 @@ button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke
   flex-direction: column;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 14px 16px 4px;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: #cbdce5 transparent;
+  padding: 16px 18px 4px;
 }
 
 /* 提醒堆：浅杏色、左对齐；收起时只露出后两张卡片的边缘。 */
-.reminder-section { flex: 0 0 auto; margin-bottom: 12px; }
+.reminder-section { flex: 0 0 auto; margin-bottom: 20px; }
 .reminder-head { margin: 0 2px 5px; color: #7c5c46; font-size: 10px; }
 .reminder-head b { font-weight: 600; }
 .reminders { position: relative; height: calc(48px + var(--peek, 15px)); overflow: visible; }
@@ -164,19 +168,21 @@ button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke
 
 .newbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex: 0 0 auto; padding: 7px 10px; margin-bottom: 9px; border-radius: 9px; background: #eaf5fb; color: #527fa0; font-size: 10px; }
 .newbar button { border: 0; background: none; color: #527fa0; white-space: nowrap; }
-.calwrap { flex: 0 0 auto; min-height: 0; position: relative; padding: 0 2px 5px; }
+.calwrap { flex: 0 0 auto; min-height: 0; position: relative; padding: 10px 0 8px; }
 #cal { display: flex; flex-direction: column; }
-.cal-wd { flex: 0 0 auto; height: 27px; padding: 0 0 7px; align-items: start; color: #9db0bc; font-size: 10px; font-weight: 600; letter-spacing: 2px; text-indent: 2px; text-align: center; }
+.cal-wd { flex: 0 0 auto; height: 22px; margin-bottom: 8px; padding: 0; align-items: start; color: #9db0bc; font-size: 11px; font-weight: 600; letter-spacing: 2px; text-indent: 2px; text-align: center; }
 .cal-wd span { padding: 0; }
-.cal-wd span:nth-child(n+6) { color: #b3c3cd; }
-.cal-week { position: relative; flex: 0 0 auto; min-height: 35px; margin: 0; padding: 0 0 9px; border-top: 1px solid var(--rule); }
-.cal-dates { height: 26px; align-items: center; color: #31597a; font: 16px/1 Bahnschrift, "Segoe UI", "Microsoft YaHei UI", sans-serif; font-variant-numeric: tabular-nums; }
-.cal-dc { height: 26px; display: flex; align-items: center; justify-content: center; padding: 0; }
-.cal-dc:nth-child(n+6) { color: var(--weekend); }
+.cal-wd span:nth-child(n+6) { color: var(--weekend); }
+/* 基础周行随宽度缩放；日程增多时由内容撑高，不截断连续日程条。 */
+.cal-week { position: relative; flex: 0 0 auto; min-height: var(--week-height, 58px); margin: 0; padding: 3px 0 8px; border-top: 1px solid #eaf0f3; }
+.cal-dates { height: 28px; align-items: center; color: #31597a; font: 17px/1 Bahnschrift, "Segoe UI", "Microsoft YaHei UI", sans-serif; font-variant-numeric: tabular-nums; }
+.cal-dc { height: 28px; display: flex; align-items: center; justify-content: center; padding: 0; }
+.cal-dc:nth-child(n+6) { color: var(--weekend); font-weight: 500; }
 .cal-dc.out { color: #c3cfd6; }
-.date-number { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; }
+.cal-dc.out:nth-child(n+6) { color: var(--weekend-out); }
+.date-number { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; }
 .cal-dc.today .date-number { background: var(--today-bg); color: var(--today); font-weight: 600; }
-.cal-lanes { margin-top: 9px; }
+.cal-lanes { margin-top: 6px; }
 .cal-lanes:empty { margin-top: 0; }
 .calwrap .cal-bar { cursor: pointer; font-weight: 400; letter-spacing: 0; transition: transform .15s ease, filter .15s ease, box-shadow .15s ease; }
 .calwrap .cal-bar.hot, .calwrap .cal-bar.sel { filter: brightness(.98) saturate(1.08); transform: translateY(-1px); box-shadow: none; z-index: 2; }
@@ -189,7 +195,7 @@ button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke
 .empty button { padding: 0 4px; border: 0; background: none; color: #a0603f; }
 
 /* 日历下方始终保留一排操作，日程很多时也能直接新建。 */
-.bottom-bar { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; margin: 10px 16px 0; }
+.bottom-bar { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; margin: 14px 18px 0; }
 .month-pill { flex: 1; min-width: 92px; height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 0 4px; border-radius: 999px; background: #eaf5fb; }
 .month-step { width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; color: #5b819a; }
 .month-step:hover { background: rgba(255, 255, 255, .8); color: #3f7598; }
@@ -283,8 +289,8 @@ input[type=checkbox], input[type=radio], input[type=range] { accent-color: #668e
   .app-shell { --corner: 12px; }
   .top { padding: 0 13px; }
   .brand-note { display: none; }
-  .content { padding-left: 12px; padding-right: 12px; }
-  .bottom-bar, .detail-section { margin-left: 12px; margin-right: 12px; }
+  .content { padding-left: 14px; padding-right: 14px; }
+  .bottom-bar, .detail-section { margin-left: 14px; margin-right: 14px; }
   .today-button, .new-button { padding: 0 10px; }
   .month-pill { padding: 0 2px; }
   .range-entry { width: 32px; }
@@ -296,7 +302,7 @@ input[type=checkbox], input[type=radio], input[type=range] { accent-color: #668e
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 </style>
-<style>html { background: #eaf1f5; } body { width: min(480px, calc(100% - 32px)); margin: 18px auto; overflow: visible; }</style></head>
+<style>html { background: #ffffff; } body { width: min(480px, calc(100% - 32px)); margin: 18px auto; overflow: visible; }</style></head>
 <body>
 <div class="app-shell" id="appShell">
 <header class="top">
@@ -502,9 +508,10 @@ input[type=checkbox], input[type=radio], input[type=range] { accent-color: #668e
     };
   }
 
-  function monthHTML({ year, month, tasks, today, barH, fontSize, barRadius }) {
+  function monthHTML({ year, month, tasks, today, barH, fontSize, barRadius, barGap, barPadding }) {
     const { start, weeks } = D.monthGrid(year, month);
     const g = geometry(barH);
+    const gap = barGap ?? g.gap, padX = barPadding ?? g.padX;
     let html = '<div class="cal-wd">' + '一二三四五六日'.split('').map(w => `<span>${w}</span>`).join('') + '</div>';
     for (let w = 0; w < weeks; w++) {
       const ws = D.addDays(start, w * 7);
@@ -515,14 +522,14 @@ input[type=checkbox], input[type=radio], input[type=range] { accent-color: #668e
         const cls = (d.getMonth() !== month ? ' out' : '') + (day === today ? ' today' : '');
         html += `<div class="cal-dc${cls}" data-date="${day}">${d.getDate()}</div>`;
       }
-      const h = lanes ? lanes * barH + (lanes - 1) * g.gap : 0;
+      const h = lanes ? lanes * barH + (lanes - 1) * gap : 0;
       html += `</div><div class="cal-lanes" style="height:${h}px">`;
       for (const { task: t, a, b, lane, cl, cr } of segs) {
         // 跨周被截断的一端：直角、贴边；正常结束的一端：圆角、留 2px
         const radius = barRadius == null ? g.rad : barRadius;
         const li = cl ? 0 : 2, ri = cr ? 0 : 2, rl = cl ? 0 : radius, rr = cr ? 0 : radius;
         const style = `left:calc(${a * 100 / 7}% + ${li}px);width:calc(${(b - a + 1) * 100 / 7}% - ${li + ri}px);`
-          + `top:${lane * (barH + g.gap)}px;height:${barH}px;line-height:${barH}px;font-size:${fontSize}px;padding:0 ${g.padX}px;`
+          + `top:${lane * (barH + gap)}px;height:${barH}px;line-height:${barH}px;font-size:${fontSize}px;padding:0 ${padX}px;`
           + `border-radius:${rl}px ${rr}px ${rr}px ${rl}px;`
           + (t.done ? '' : `background:${t.color};color:${C.barText(t.color)};`);
         html += `<div class="cal-bar${t.done ? ' done' : ''}" data-id="${t.id}" style="${style}">${esc(t.title)}</div>`;
@@ -653,6 +660,14 @@ function measureDetail() {
 }
 new ResizeObserver(reportHeight).observe(shell);
 new ResizeObserver(measureDetail).observe($('detail'));
+// 与 HTML 方案使用同一宽高规则；只在宽度变化时更新，避免高度动画反复触发布局。
+let calendarWidth = 0;
+new ResizeObserver(() => {
+  const width = cal.clientWidth;
+  if (width === calendarWidth) return;
+  calendarWidth = width;
+  cal.style.setProperty('--week-height', `${Math.max(56, Math.round(width * .135))}px`);
+}).observe(cal);
 rc.onW2Layout(({ maxHeight }) => {
   availableHeight = maxHeight;
   shell.style.setProperty('--available-height', `${maxHeight}px`);
@@ -693,7 +708,8 @@ function render() {
   if (!App.view) { const t = D.parse(s.today); App.view = { y: t.getFullYear(), m: t.getMonth() }; }
   const { y, m } = App.view;
   $('monthLabel').textContent = `${y} 年 ${m + 1} 月`;
-  cal.innerHTML = K.monthHTML({ year: y, month: m, tasks: s.tasks, today: s.today, barH: BAR_H, fontSize: FONT, barRadius: 999 });
+  cal.innerHTML = K.monthHTML({ year: y, month: m, tasks: s.tasks, today: s.today,
+    barH: BAR_H, fontSize: FONT, barRadius: 999, barGap: 5, barPadding: 8 });
   cal.querySelectorAll('.cal-dc').forEach(cell => {
     cell.innerHTML = `<span class="date-number">${cell.textContent}</span>`;
     if (cell.dataset.date === s.today) cell.setAttribute('aria-current', 'date');

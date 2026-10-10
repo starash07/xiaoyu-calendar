@@ -27,6 +27,14 @@ function measureDetail() {
 }
 new ResizeObserver(reportHeight).observe(shell);
 new ResizeObserver(measureDetail).observe($('detail'));
+// 与 HTML 方案使用同一宽高规则；只在宽度变化时更新，避免高度动画反复触发布局。
+let calendarWidth = 0;
+new ResizeObserver(() => {
+  const width = cal.clientWidth;
+  if (width === calendarWidth) return;
+  calendarWidth = width;
+  cal.style.setProperty('--week-height', `${Math.max(56, Math.round(width * .135))}px`);
+}).observe(cal);
 rc.onW2Layout(({ maxHeight }) => {
   availableHeight = maxHeight;
   shell.style.setProperty('--available-height', `${maxHeight}px`);
@@ -67,7 +75,8 @@ function render() {
   if (!App.view) { const t = D.parse(s.today); App.view = { y: t.getFullYear(), m: t.getMonth() }; }
   const { y, m } = App.view;
   $('monthLabel').textContent = `${y} 年 ${m + 1} 月`;
-  cal.innerHTML = K.monthHTML({ year: y, month: m, tasks: s.tasks, today: s.today, barH: BAR_H, fontSize: FONT, barRadius: 999 });
+  cal.innerHTML = K.monthHTML({ year: y, month: m, tasks: s.tasks, today: s.today,
+    barH: BAR_H, fontSize: FONT, barRadius: 999, barGap: 5, barPadding: 8 });
   cal.querySelectorAll('.cal-dc').forEach(cell => {
     cell.innerHTML = `<span class="date-number">${cell.textContent}</span>`;
     if (cell.dataset.date === s.today) cell.setAttribute('aria-current', 'date');

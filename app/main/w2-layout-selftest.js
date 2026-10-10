@@ -32,6 +32,7 @@ async function run({ store, w2, broadcast, note, shot }) {
   // 避免真实鼠标的位置影响自动收起；以下用同一套原生收起/滑出方法验证。
   clearInterval(w2.pollTimer);
   try {
+    await require('./w2-calendar-selftest').run({ store, w2, broadcast, note, shot });
     store.tasks = [
       task('layout-short', '新界面设计', '整理功能，画出主界面。\n详情跟随窗口底部展开。', '#B7DCEF'),
       task('layout-other', '周末出游', '带上相机和水。', '#F4D691'),

@@ -81,7 +81,7 @@ function build() {
   let html = fs.readFileSync(path.join(renderer, 'index.html'), 'utf8');
   html = html.replace('<title>小鱼日程表</title>', '<title>小鱼日程表 · 主界面交互预览</title>');
   html = html.replace('把日子安排好', '交互预览 · 数据不保存');
-  html = html.replace('</head>', '<style>html { background: #eaf1f5; } body { width: min(480px, calc(100% - 32px)); margin: 18px auto; overflow: visible; }</style></head>');
+  html = html.replace('</head>', '<style>html { background: #ffffff; } body { width: min(480px, calc(100% - 32px)); margin: 18px auto; overflow: visible; }</style></head>');
   html = html.replace(/<link rel="stylesheet" href="([^"]+)">/g, (_, file) => `<style>${fs.readFileSync(path.resolve(renderer, file), 'utf8')}</style>`);
   html = html.replace(/<script src="([^"]+)"><\/script>/g, (_, file) => {
     const bridge = file === 'w2.js' ? `<script>(${previewApi.toString()})(${JSON.stringify(DEFAULT_SETTINGS)});</script>` : '';

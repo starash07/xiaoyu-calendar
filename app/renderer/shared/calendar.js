@@ -45,9 +45,10 @@
     };
   }
 
-  function monthHTML({ year, month, tasks, today, barH, fontSize, barRadius }) {
+  function monthHTML({ year, month, tasks, today, barH, fontSize, barRadius, barGap, barPadding }) {
     const { start, weeks } = D.monthGrid(year, month);
     const g = geometry(barH);
+    const gap = barGap ?? g.gap, padX = barPadding ?? g.padX;
     let html = '<div class="cal-wd">' + '一二三四五六日'.split('').map(w => `<span>${w}</span>`).join('') + '</div>';
     for (let w = 0; w < weeks; w++) {
       const ws = D.addDays(start, w * 7);
@@ -58,14 +59,14 @@
         const cls = (d.getMonth() !== month ? ' out' : '') + (day === today ? ' today' : '');
         html += `<div class="cal-dc${cls}" data-date="${day}">${d.getDate()}</div>`;
       }
-      const h = lanes ? lanes * barH + (lanes - 1) * g.gap : 0;
+      const h = lanes ? lanes * barH + (lanes - 1) * gap : 0;
       html += `</div><div class="cal-lanes" style="height:${h}px">`;
       for (const { task: t, a, b, lane, cl, cr } of segs) {
         // 跨周被截断的一端：直角、贴边；正常结束的一端：圆角、留 2px
         const radius = barRadius == null ? g.rad : barRadius;
         const li = cl ? 0 : 2, ri = cr ? 0 : 2, rl = cl ? 0 : radius, rr = cr ? 0 : radius;
         const style = `left:calc(${a * 100 / 7}% + ${li}px);width:calc(${(b - a + 1) * 100 / 7}% - ${li + ri}px);`
-          + `top:${lane * (barH + g.gap)}px;height:${barH}px;line-height:${barH}px;font-size:${fontSize}px;padding:0 ${g.padX}px;`
+          + `top:${lane * (barH + gap)}px;height:${barH}px;line-height:${barH}px;font-size:${fontSize}px;padding:0 ${padX}px;`
           + `border-radius:${rl}px ${rr}px ${rr}px ${rl}px;`
           + (t.done ? '' : `background:${t.color};color:${C.barText(t.color)};`);
         html += `<div class="cal-bar${t.done ? ' done' : ''}" data-id="${t.id}" style="${style}">${esc(t.title)}</div>`;
