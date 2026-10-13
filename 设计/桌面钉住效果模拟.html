@@ -47,6 +47,9 @@
     .desktop[data-wallpaper="sand"] { --sky-top: #d3d9d2; --sky-low: #efeadf; --sun: #fff6e0; --far: #c6cbbb; --middle: #b9bca7; --near: #a4b09f; --front: #8fa294; }
     .desktop[data-wallpaper="night"] { --sky-top: #25364f; --sky-low: #8b95a4; --sun: #eee4d6; --far: #667b94; --middle: #50657f; --near: #3c526e; --front: #2c435e; }
     .wallpaper { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .geometry-art { display: none; }
+    .desktop[data-wallpaper="sand"] .landscape-art { display: none; }
+    .desktop[data-wallpaper="sand"] .geometry-art { display: inline; }
     .custom-wallpaper { position: absolute; inset: 0; background-position: center; background-size: cover; pointer-events: none; }
     .desktop-icons { position: absolute; left: 14px; top: 22px; z-index: 5; display: grid; gap: 19px; width: 78px; pointer-events: none; }
     .desktop-icon { display: grid; justify-items: center; gap: 6px; font-size: 11px; color: var(--icon-ink); text-align: center; text-shadow: 0 1px 4px #18354877; }
@@ -132,8 +135,8 @@
     <div class="identity"><span class="fish" aria-hidden="true"><i></i><i></i><i></i><i></i></span><div><strong>小鱼日程表</strong><small>桌面钉住效果 · 磨砂玻璃</small></div></div>
     <div class="tools">
       <div class="wall-options" aria-label="壁纸场景">
-        <button type="button" data-wallpaper="mist" aria-pressed="true">雾蓝</button>
-        <button type="button" data-wallpaper="sand" aria-pressed="false">浅色</button>
+        <button type="button" data-wallpaper="mist" aria-pressed="false">雾蓝</button>
+        <button type="button" data-wallpaper="sand" aria-pressed="true">几何</button>
         <button type="button" data-wallpaper="night" aria-pressed="false">暮色</button>
       </div>
       <button class="tool" id="wallpaperBtn" type="button">自己的壁纸</button>
@@ -153,13 +156,20 @@
     <label>周末颜色<input id="weekendColor" aria-label="周末颜色" type="color" value="#8a70d6"></label>
     <label>示例日程<select id="density" aria-label="示例日程数量"><option value="few">少量</option><option value="normal" selected>适中 · 含两三条叠放</option><option value="many">密集</option><option value="empty">无日程</option></select></label>
   </section>
-  <main class="desktop" id="desktop" data-wallpaper="mist" aria-label="模拟的 Windows 桌面">
+  <main class="desktop" id="desktop" data-wallpaper="sand" aria-label="模拟的 Windows 桌面">
     <svg class="wallpaper" id="wallpaper" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
       <defs>
         <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop stop-color="var(--sky-top)"/><stop offset="1" stop-color="var(--sky-low)"/></linearGradient>
         <radialGradient id="glow"><stop stop-color="var(--sun)" stop-opacity=".75"/><stop offset="1" stop-color="var(--sun)" stop-opacity="0"/></radialGradient>
         <linearGradient id="haze" x1="0" y1="0" x2="0" y2="1"><stop stop-color="var(--sky-low)" stop-opacity="0"/><stop offset="1" stop-color="var(--sky-low)" stop-opacity=".26"/></linearGradient>
+        <pattern id="glass-wallpaper-lines" width="44" height="44" patternUnits="userSpaceOnUse" patternTransform="rotate(-28)">
+          <path d="M0 0V44" fill="none" stroke="#fff6e8" stroke-width="6" opacity=".65"/>
+        </pattern>
+        <pattern id="glass-wallpaper-grid" width="104" height="104" patternUnits="userSpaceOnUse">
+          <path d="M104 0H0V104" fill="none" stroke="#fff8ee" stroke-width="3" opacity=".6"/>
+        </pattern>
       </defs>
+      <g class="landscape-art">
       <path fill="url(#sky)" d="M0 0h1600v1000H0z"/>
       <ellipse cx="440" cy="225" rx="570" ry="490" fill="url(#glow)"/>
       <circle cx="420" cy="254" r="39" fill="var(--sun)" opacity=".5"/>
@@ -168,6 +178,22 @@
       <path fill="var(--near)" d="M0 804Q180 645 463 733T944 748Q1240 612 1600 804V1000H0Z"/>
       <path fill="var(--front)" d="M0 930Q310 770 605 890T1170 859Q1410 790 1600 900V1000H0Z"/>
       <path fill="url(#haze)" d="M0 0h1600v1000H0z"/>
+      </g>
+      <g class="geometry-art">
+        <path fill="#eddfbf" d="M0 0h1600v1000H0z"/>
+        <path fill="#d39486" d="M0 0h1050L330 1000H0Z"/>
+        <path fill="#e7b968" d="M0 640 490 0h340L110 1000H0Z"/>
+        <path fill="url(#glass-wallpaper-lines)" d="M0 640 490 0h340L110 1000H0Z"/>
+        <path fill="#75afa5" d="M940 0h370L590 1000H220Z"/>
+        <path fill="#418f86" d="M1130 0h160L570 1000H410Z"/>
+        <path fill="#a29bcc" d="M1600 185v815H865Z"/>
+        <path fill="url(#glass-wallpaper-grid)" d="M1600 185v815H865Z"/>
+        <path fill="#f5e9d2" d="m885 210 82-114 465 420-82 114Z"/>
+        <path fill="#e7b968" d="m931 146 16-22 465 420-16 22Z"/>
+        <circle cx="1175" cy="735" r="106" fill="#f2c98e"/>
+        <circle cx="1175" cy="735" r="79" fill="none" stroke="#f9edda" stroke-width="4"/>
+        <path fill="#f5e9d2" d="M0 897 281 1000H0Z"/>
+      </g>
     </svg>
     <div class="custom-wallpaper" id="customWallpaper" hidden></div>
     <div class="desktop-icons" aria-hidden="true">
