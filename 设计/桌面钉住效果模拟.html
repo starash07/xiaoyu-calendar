@@ -55,9 +55,9 @@
     .desktop-icon { display: grid; justify-items: center; gap: 6px; font-size: 11px; color: var(--icon-ink); text-align: center; text-shadow: 0 1px 4px #18354877; }
     .desktop-icon svg { width: 36px; height: 36px; filter: drop-shadow(0 2px 2px #36536920); }
     .widget {
-      --panel-fill: rgb(255 255 255 / .24); --text: #315873; --soft: #607e8d;
+      --panel-fill: rgb(255 255 255 / .14); --text: #315873; --soft: #607e8d;
       --weekend: #8a70d6; --weekend-out: #b7acd7; --date-size: 17px; --week-height: 54px;
-      --glass-blur: 24px; --today-fill: #e3f2ec; --today-ink: #4e957f;
+      --glass-blur: 14px; --today-fill: #e3f2ec; --today-ink: #4e957f;
       position: absolute; z-index: 2; top: 44px; right: 36px; width: 420px; max-width: calc(100% - 32px);
       padding: 18px 17px 15px; border: 1px solid #ffffff52; border-top-color: #ffffffa6; border-bottom-color: #ffffff33; border-radius: 15px;
       color: var(--text); background-color: var(--panel-fill);
@@ -147,10 +147,10 @@
     </div>
   </header>
   <section class="adjustments" id="adjustments" aria-label="桌面效果调节" hidden>
-    <label>玻璃不透明度<output id="opacityValue" for="opacityRange">24%</output><input id="opacityRange" aria-label="玻璃不透明度" type="range" min="0" max="100" step="1" value="24"></label>
+    <label>玻璃不透明度<output id="opacityValue" for="opacityRange">14%</output><input id="opacityRange" aria-label="玻璃不透明度" type="range" min="0" max="100" step="1" value="14"></label>
     <label>挂件宽度<output id="widthValue" for="widthRange">420px</output><input id="widthRange" aria-label="挂件宽度" type="range" min="320" max="600" step="10" value="420"></label>
     <label>日期字号<output id="fontValue" for="fontRange">17px</output><input id="fontRange" aria-label="日期字号" type="range" min="13" max="22" step="1" value="17"></label>
-    <label>磨砂强度<output id="blurValue" for="blurRange">24px</output><input id="blurRange" aria-label="磨砂强度" type="range" min="0" max="40" step="1" value="24"></label>
+    <label>磨砂强度<output id="blurValue" for="blurRange">14px</output><input id="blurRange" aria-label="磨砂强度" type="range" min="0" max="40" step="1" value="14"></label>
     <label>玻璃底色<input id="panelColor" aria-label="玻璃底色" type="color" value="#ffffff"></label>
     <label>文字颜色<input id="textColor" aria-label="文字颜色" type="color" value="#315873"></label>
     <label>周末颜色<input id="weekendColor" aria-label="周末颜色" type="color" value="#8a70d6"></label>
