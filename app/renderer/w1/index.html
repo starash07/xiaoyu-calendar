@@ -2,24 +2,35 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<title>日程挂件 · 桌面</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>小鱼日程表 · 桌面</title>
 <link rel="stylesheet" href="../shared/calendar.css">
 <link rel="stylesheet" href="w1.css">
 </head>
 <body>
-<div id="panel" class="panel">
-  <div class="bg" id="bg"></div>
-  <div class="tint" id="tint"></div>
+<div id="panel" class="panel" aria-label="桌面日历">
+  <div class="bg" id="bg" aria-hidden="true"></div>
+  <div class="tint" id="tint" aria-hidden="true"></div>
+  <div class="sheen" aria-hidden="true"></div>
   <div class="content">
-    <div class="loose-bar"><span>拖动摆放位置</span><button id="pinBtn" type="button">钉住</button></div>
-    <div class="head"><span id="title"></span><span class="flag" id="flag" hidden></span></div>
-    <div id="cal"></div>
-    <div class="detail" id="detail" hidden></div>
+    <div class="loose-bar" id="dragHandle"><span id="placementNote">拖动摆放位置</span><button id="pinBtn" type="button">钉住</button></div>
+    <div class="head">
+      <div class="month-heading" id="title"><strong id="month"></strong><span id="year"></span></div>
+      <span class="flag" id="flag" hidden aria-describedby="flagTip">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
+        <span id="flagCount"></span>
+      </span>
+      <div class="flag-tip" id="flagTip" hidden role="tooltip">有待确认提醒<span>请到主窗口查看</span></div>
+    </div>
+    <div id="cal" aria-label="本月日程"></div>
+    <section class="details-wrap" id="details" aria-label="日程详情" aria-hidden="true">
+      <div class="details-clip"><div class="detail" id="detail"></div></div>
+    </section>
   </div>
-  <div class="flag-tip" id="flagTip" hidden>有待确认提醒，请到主窗口查看</div>
 </div>
 <script src="../shared/dates.js"></script>
 <script src="../shared/colors.js"></script>
+<script src="../shared/appearance.js"></script>
 <script src="../shared/calendar.js"></script>
 <script src="w1.js"></script>
 </body>

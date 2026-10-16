@@ -10,16 +10,27 @@ const P = require('./paths');
 const MARGIN = 8;   // 页面四周的透明留白，摆放中的虚线框画在这里
 
 // 壁纸的显示方式（填充 / 适应 / 拉伸 / 平铺 / 居中 / 跨区），用来把模糊背景对齐到真实壁纸
-function wallpaperFit() {
-  const read = name => {
+function wallpaperSettings() {
+  const read = (name, key = 'HKCU\\Control Panel\\Desktop') => {
     try {
-      const out = execFileSync('reg', ['query', 'HKCU\\Control Panel\\Desktop', '/v', name], { encoding: 'utf8', windowsHide: true });
-      const m = out.match(/REG_SZ\s+(\S+)/);
-      return m ? m[1] : '';
+      const out = execFileSync('reg', ['query', key, '/v', name], { encoding: 'utf8', windowsHide: true });
+      const m = out.match(/REG_SZ\s+([^\r\n]+)/);
+      return m ? m[1].trim() : '';
     } catch (_) { return ''; }
   };
-  if (read('TileWallpaper') === '1') return 'tile';
-  return { 10: 'fill', 6: 'fit', 2: 'stretch', 22: 'span', 0: 'center' }[read('WallpaperStyle')] || 'fill';
+  const fit = read('TileWallpaper') === '1' ? 'tile'
+    : { 10: 'fill', 6: 'fit', 2: 'stretch', 22: 'span', 0: 'center' }[read('WallpaperStyle')] || 'fill';
+  const rgb = read('Background', 'HKCU\\Control Panel\\Colors').split(/\s+/).map(Number);
+  const backgroundColor = rgb.length === 3 && rgb.every(n => Number.isFinite(n) && n >= 0 && n <= 255)
+    ? `rgb(${rgb.join(',')})` : 'transparent';
+  return { fit, backgroundColor };
+}
+
+function desktopBounds() {
+  const displays = screen.getAllDisplays().map(d => d.bounds);
+  const x = Math.min(...displays.map(d => d.x)), y = Math.min(...displays.map(d => d.y));
+  return { x, y, width: Math.max(...displays.map(d => d.x + d.width)) - x,
+    height: Math.max(...displays.map(d => d.y + d.height)) - y };
 }
 
 // 壁纸在这块屏幕上实际画在哪（屏幕坐标）
@@ -47,6 +58,8 @@ class W1 {
     this.lastPt = null;
     this.lastInside = false;
     this.wallKey = '';
+    this.wallpaperCheckedAt = 0;
+    this.cachedWallpaper = null;
     this.quitting = false;
   }
 
@@ -116,6 +129,8 @@ class W1 {
         this.workerw = ww;
         this.embedded = true;
         this.degraded = false;
+        this.lastPt = null;
+        this.lastInside = false;
         this.place();
         return true;
       }
@@ -139,27 +154,36 @@ class W1 {
     if (this.embedded) W.setParent(this.hwnd, 0);
     this.embedded = false;
     this.degraded = false;
-    this.win.setAlwaysOnTop(true);
     this.place();
+    // 先完成从 WorkerW 到普通窗口的重新定位，再恢复置顶，避免定位时丢掉层级。
+    this.win.setAlwaysOnTop(true);
   }
 
   // 页面报告内容大小：顶部位置不动，只改宽高（底边随内容伸缩）
   resize(w, h) {
+    if (!Number.isFinite(w) || !Number.isFinite(h)) return;
     w = Math.max(120, Math.ceil(w));
     h = Math.max(60, Math.ceil(h));
     if (w === this.size.w && h === this.size.h) return;
+    const widthChanged = w !== this.size.w;
     this.size = { w, h };
     this.place();
+    if (widthChanged) {
+      this.lastPt = null;
+      this.sendInfo();
+    }
   }
 
   // 钉住后收不到鼠标消息：每 100ms 读一次光标，光标下面确实是桌面时才把坐标发给页面做悬停
   poll() {
     if (!this.win || !this.embedded) return;
     const pt = W.cursorPos();
-    if (this.lastPt && pt.x === this.lastPt.x && pt.y === this.lastPt.y) return;
+    const moved = !this.lastPt || pt.x !== this.lastPt.x || pt.y !== this.lastPt.y;
     this.lastPt = pt;
     const r = W.windowRect(this.hwnd);
     const inside = pt.x >= r.left && pt.x < r.right && pt.y >= r.top && pt.y < r.bottom && W.isDesktopAt(pt, this.hwnd);
+    // 鼠标静止时也检查遮挡，切到工作窗口后应收起原来的详情。
+    if (!moved && inside === this.lastInside) return;
     if (inside) {
       const scale = screen.getDisplayNearestPoint(screen.screenToDipPoint(pt)).scaleFactor;
       this.send('w1:cursor', { x: (pt.x - r.left) / scale, y: (pt.y - r.top) / scale });
@@ -171,32 +195,42 @@ class W1 {
   }
 
   wallpaper() {
+    // 拖动窗口时会逐帧更新位置；壁纸配置单独缓存，避免每帧启动 reg 子进程。
+    const now = Date.now();
+    if (this.cachedWallpaper && now - this.wallpaperCheckedAt < 3000) return this.cachedWallpaper;
+    this.wallpaperCheckedAt = now;
+    const config = wallpaperSettings();
     const file = W.wallpaperPath();
-    if (!file || !fs.existsSync(file)) return null;
-    return { url: `${pathToFileURL(file).href}?v=${Math.round(fs.statSync(file).mtimeMs)}`, fit: wallpaperFit() };
+    let url = '';
+    try { if (file && fs.existsSync(file)) url = `${pathToFileURL(file).href}?v=${Math.round(fs.statSync(file).mtimeMs)}`; }
+    catch (_) { /* 壁纸切换过程中暂时不可读，先使用桌面底色，下轮重读。 */ }
+    return this.cachedWallpaper = { ...config, url, file };
   }
 
   sendInfo() {
     if (!this.pos) return;
-    const display = screen.getDisplayMatching({ x: this.pos.x, y: this.pos.y, width: this.size.w, height: this.size.h });
+    const display = screen.getDisplayNearestPoint({ x: Math.round(this.pos.x + this.size.w / 2), y: Math.round(this.pos.y + MARGIN) });
     const wallpaper = this.wallpaper();
-    this.wallKey = wallpaper ? wallpaper.url : '';
+    const wallpaperArea = wallpaper.fit === 'span' ? desktopBounds() : display.bounds;
+    this.wallKey = JSON.stringify(wallpaper);
     this.send('w1:info', {
-      loose: !this.pinned, embedded: this.embedded, degraded: this.degraded,
-      pos: this.pos, margin: MARGIN, display: display.bounds, wallpaper,
+      loose: !this.pinned, embedded: this.embedded, degraded: this.degraded, dragging: !!this.dragTimer,
+      pos: this.pos, margin: MARGIN, display: display.bounds, scaleFactor: display.scaleFactor,
+      wallpaper, wallpaperArea,
     });
-    this.updateWallAvg(display);
+    this.updateWallAvg(display, wallpaper, wallpaperArea);
   }
 
   // 挂件底下那块壁纸的平均颜色：设置页算字体颜色对比度时用
-  updateWallAvg(display) {
+  updateWallAvg(display, wallpaper, wallpaperArea) {
     clearTimeout(this.avgTimer);
     this.avgTimer = setTimeout(() => {
-      const file = W.wallpaperPath();
+      if (this.quitting || !this.win) return;
+      const file = wallpaper.file;
       const img = file && fs.existsSync(file) ? nativeImage.createFromPath(file) : null;
       if (!img || img.isEmpty()) return;
       const { width: iw, height: ih } = img.getSize();
-      const r = wallRect(wallpaperFit(), display.bounds, iw, ih);
+      const r = wallRect(wallpaper.fit, wallpaperArea, iw / display.scaleFactor, ih / display.scaleFactor);
       const px = this.pos.x + MARGIN, py = this.pos.y + MARGIN;
       const pw = Math.max(1, this.size.w - MARGIN * 2), ph = Math.max(1, this.size.h - MARGIN * 2);
       const x = Math.round(Math.max(0, Math.min(iw - 1, (px - r.x) * iw / r.w)));
@@ -219,10 +253,14 @@ class W1 {
     if (!this.win) return;
     if (this.pinned) {
       const lost = this.embedded && (!W.isWindow(this.workerw) || W.parentOf(this.hwnd) !== this.workerw);
-      if (lost || this.degraded) this.embed();
+      if (lost || this.degraded) {
+        const wasEmbedded = this.embedded;
+        this.embed();
+        if (this.embedded !== wasEmbedded || lost) { this.sendInfo(); this.onChange(); }
+      }
     }
     const wallpaper = this.wallpaper();
-    if ((wallpaper ? wallpaper.url : '') !== this.wallKey) this.sendInfo();   // 换壁纸或幻灯片切换
+    if (JSON.stringify(wallpaper) !== this.wallKey) this.sendInfo();   // 换壁纸、背景色或显示方式
     this.ensureOnScreen(true);
   }
 
@@ -250,7 +288,9 @@ class W1 {
       if (!W.leftButtonDown()) {
         clearInterval(this.dragTimer);
         this.dragTimer = null;
-        this.store.saveSettings({ w1: { x: Math.round(this.pos.x), y: Math.round(this.pos.y) } });
+        const res = this.store.saveSettings({ w1: { x: Math.round(this.pos.x), y: Math.round(this.pos.y) } });
+        this.sendInfo();
+        if (!res.ok) this.balloon('挂件位置保存失败，请重新摆放后再试');
         return;
       }
       const c = screen.getCursorScreenPoint();
@@ -258,11 +298,14 @@ class W1 {
       this.place();
       this.sendInfo();
     }, 16);
+    this.sendInfo();
   }
 
   setPinned(pinned) {
     const res = this.store.saveSettings({ w1: { pinned, x: Math.round(this.pos.x), y: Math.round(this.pos.y) } });
     if (!res.ok) return res;
+    clearInterval(this.dragTimer);
+    this.dragTimer = null;
     if (pinned) this.embed(); else this.unembed();
     this.sendInfo();
     return res;
@@ -281,6 +324,7 @@ class W1 {
     clearInterval(this.pollTimer);
     clearInterval(this.healthTimer);
     clearInterval(this.dragTimer);
+    clearTimeout(this.avgTimer);
     if (!this.win) return;
     if (this.embedded) W.setParent(this.hwnd, 0);
     this.win.destroy();

@@ -1,21 +1,79 @@
 html, body { margin: 0; background: transparent; overflow: hidden; }
-body { padding: 8px; font-family: "Microsoft YaHei UI", "Microsoft YaHei", sans-serif; user-select: none; cursor: default; }
+* { box-sizing: border-box; }
+body { padding: 8px; font: 13px/1.5 "Microsoft YaHei UI", "Microsoft YaHei", sans-serif; user-select: none; cursor: default; }
+button { font: inherit; cursor: pointer; }
+button:focus-visible { outline: 2px solid #8a70d6; outline-offset: 2px; }
 
-/* 玻璃底板：底下垫一层模糊过的壁纸，上面再盖一层半透明底色 */
-.panel { position: relative; width: var(--w, 420px); box-sizing: border-box; border-radius: 14px; overflow: hidden; border: 1px solid var(--edge); color: var(--fg); }
-.panel.loose { outline: 1.5px dashed var(--fg2); outline-offset: 3px; cursor: move; }
-.bg { position: absolute; inset: -40px; background-repeat: no-repeat; filter: blur(var(--blur, 14px)); }
-.tint { position: absolute; inset: 0; }
-.content { position: relative; padding: 14px 12px 12px; }
+/* 壁纸副本只在底层模糊，日期、日程条和详情不受影响。 */
+.panel {
+  --fg: #315873; --fg2: rgb(49 88 115 / .72); --fg3: rgb(49 88 115 / .32);
+  --weekend: #8a70d6; --weekend-out: #b7acd7; --date-size: 17px;
+  --today-fill: #c5e5d8; --today-ink: #427e68; --week-height: 54px;
+  position: relative; width: var(--w, 420px); border-radius: 15px; overflow: hidden;
+  border: 1px solid #ffffff52; border-top-color: #ffffffa6; border-bottom-color: #ffffff33;
+  color: var(--fg); box-shadow: 0 3px 8px #254b6214;
+}
+.panel::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; box-shadow: inset 0 1px 0 #ffffff33, inset 0 -1px 0 #ffffff0d; }
+.panel.loose { outline: 1.5px dashed #477a92a6; outline-offset: 4px; }
+.bg { position: absolute; inset: -120px; background-repeat: no-repeat; filter: blur(var(--blur, 14px)) saturate(115%); pointer-events: none; }
+.tint, .sheen { position: absolute; inset: 0; pointer-events: none; }
+.tint { background: rgb(255 255 255 / .14); transition: background-color .18s; }
+.sheen { background: linear-gradient(135deg, #ffffff24 0%, #ffffff0a 38%, #ffffff00 68%, #ffffff0d 100%); }
+.content { position: relative; padding: 18px 17px 15px; }
 
-/* 摆放中的提示条 */
-.loose-bar { display: none; align-items: center; justify-content: space-between; gap: 8px; margin: -4px -2px 10px; padding: 5px 6px 5px 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.5); color: #fff; font-size: 12px; }
+.loose-bar { display: none; align-items: center; justify-content: space-between; gap: 12px; margin: -6px -5px 12px; padding: 5px 9px; border-radius: 8px; background: #ffffff8f; color: #557485; font-size: 11px; cursor: grab; }
 .panel.loose .loose-bar { display: flex; }
-.loose-bar button { font: inherit; font-size: 12px; border: 0; border-radius: 6px; padding: 3px 14px; background: #5DCAA5; color: #04342C; cursor: pointer; }
-.loose-bar button:hover { background: #7ad6b8; }
+.panel.dragging .loose-bar { cursor: grabbing; }
+.loose-bar button { border: 0; border-radius: 6px; padding: 4px 11px; background: #dceee6; color: #3d7362; font-size: 11px; }
+.loose-bar button:hover { background: #cce7db; }
+.loose-bar button:disabled { opacity: .6; }
 
-.head { display: flex; align-items: center; justify-content: space-between; font-size: 14px; padding-left: 3px; margin-bottom: 10px; }
+.head { position: relative; display: flex; align-items: center; justify-content: space-between; min-height: 25px; padding: 0 3px; margin-bottom: 17px; }
+.month-heading { display: flex; align-items: baseline; gap: 9px; }
+.month-heading strong { font-size: 20px; line-height: 1; font-weight: 500; letter-spacing: .5px; }
+.month-heading span { font-size: 11px; color: var(--fg2); letter-spacing: 1.2px; }
+.flag { display: inline-flex; align-items: center; gap: 4px; padding: 4px 7px; border-radius: 8px; background: #fff2dfba; color: #a87952; font-size: 11px; }
+.flag svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.flag-tip { position: absolute; right: 0; top: 33px; z-index: 5; padding: 8px 11px; border-radius: 9px; background: #fffaf4; color: #8e6b4b; box-shadow: 0 3px 15px #21435915; font-size: 11px; white-space: nowrap; pointer-events: none; }
+.flag-tip span { display: block; margin-top: 2px; color: #a58c75; }
 
-/* 提醒标志：只提示，不能点 */
-.flag { min-width: 16px; height: 16px; padding: 0 5px; box-sizing: border-box; border-radius: 8px; background: #F0997B; color: #4A1B0C; font-size: 10px; line-height: 16px; text-align: center; }
-.flag-tip { position: absolute; right: 12px; top: 38px; z-index: 5; padding: 5px 9px; border-radius: 6px; background: rgba(0, 0, 0, 0.75); color: #fff; font-size: 11px; white-space: nowrap; pointer-events: none; }
+/* 独立于主窗口：采用桌面 HTML 的日期、空白周和连续横条尺寸。 */
+.cal-wd, .cal-dates { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); text-align: center; }
+.cal-wd { height: 27px; padding: 0; color: var(--fg2); font-size: 11px; }
+.cal-wd span { padding: 0; }
+.cal-wd span:nth-child(n+6) { color: var(--weekend); font-weight: 500; }
+.cal-week { min-height: var(--week-height); padding: 6px 0 8px; margin: 0; border-top: 1px solid var(--rule, rgb(49 88 115 / .1)); }
+.cal-dates { height: 28px; align-items: center; color: var(--fg); }
+.cal-dc { display: grid; place-items: center; height: 28px; padding: 0; font: var(--date-size)/1 Bahnschrift, "Segoe UI", sans-serif; font-variant-numeric: tabular-nums; }
+.cal-dc:nth-child(n+6) { color: var(--weekend); font-weight: 500; }
+.cal-dc.out { color: var(--fg3); }
+.cal-dc.out:nth-child(n+6) { color: var(--weekend-out); }
+.date-number { display: grid; place-items: center; width: 28px; height: 28px; padding-top: 2px; }
+.cal-dc.today { font-weight: 400; }
+.cal-dc.today .date-number { position: relative; isolation: isolate; border-radius: 50%; background: var(--today-fill); color: var(--today-ink); box-shadow: 2px 3px 6px #315f5233, -1px -1px 4px #eafff36b; }
+.cal-dc.today .date-number::before, .cal-dc.today .date-number::after { content: ""; position: absolute; z-index: -1; pointer-events: none; }
+.cal-dc.today .date-number::before {
+  inset: 0; border-radius: inherit;
+  background: radial-gradient(ellipse at 18% 20%, #d5f5e6bb 0%, #d5f5e600 64%),
+    radial-gradient(ellipse at 76% 30%, #add9c38a 0%, #add9c300 68%),
+    linear-gradient(145deg, #bfe3d2 0%, #d4ecdf 58%, #e4f5e9 100%);
+  box-shadow: inset 1px 1px 1px #8ebfa54d, inset -1px -1px 1.5px #edfff2d9;
+}
+.cal-dc.today .date-number::after { inset: 1px; border-radius: inherit; background: linear-gradient(120deg, #effff42b 0%, #effff400 48%, #dffff054 80%, #effff48c 100%); filter: blur(.3px); opacity: .65; transition: opacity .24s ease-out; }
+.cal-dc.today:hover .date-number::after, .cal-dc.today.hov .date-number::after { opacity: .9; }
+.cal-lanes { position: relative; margin-top: 6px; }
+.cal-lanes:empty { height: 0; margin: 0; }
+.cal-bar { cursor: default; transition: transform .16s, filter .16s; }
+.cal-bar.hot, .cal-bar.sel { box-shadow: none; transform: translateY(-1px); filter: saturate(1.18); }
+
+/* 保留内容到收起结束，观察每一帧高度，让原生窗口底边跟着缓动。 */
+.details-wrap { display: grid; grid-template-rows: 0fr; opacity: 0; margin-top: 0; transition: grid-template-rows .24s cubic-bezier(.22, 1, .36, 1), opacity .18s, margin-top .24s; }
+.details-wrap.show { grid-template-rows: 1fr; opacity: 1; margin-top: 13px; }
+.details-clip { min-height: 0; overflow: hidden; }
+.detail { display: grid; grid-template-columns: 3px minmax(0, 1fr); gap: 10px; margin: 0; padding: 12px 0 0; border-top: 1px solid var(--detail-rule, rgb(49 88 115 / .14)); }
+.dt-bar { width: 3px; border-radius: 3px; }
+.dt-title { margin: 0; font-size: 12px; font-weight: 600; word-break: break-word; }
+.dt-meta, .dt-note { margin-top: 4px; color: var(--fg2); font-size: 11px; line-height: 1.5; }
+.dt-note { white-space: pre-wrap; word-break: break-word; }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }

@@ -3,27 +3,31 @@ const Settings = (() => {
   const page = $('settings');
   const q = id => document.getElementById(id);
   let isOpenFlag = false;
+  let editingAppearance = false, appearanceRevision = 0;
 
-  // 恢复默认用；和主进程 store.js 里的默认外观保持一致
-  const DEFAULT_AP = { panelColor: '#000000', panelOpacity: 28, blur: 14, textColor: '#FFFFFF', barFontSize: 10, barHeight: 12, width: 420 };
+  const A = RCDesktopAppearance;
+  const DEFAULT_AP = A.DEFAULT;
   const SLIDERS = [
-    ['panelOpacity', '底板不透明度', 0, 100, 1, v => `${v}%`],
-    ['blur', '模糊强度', 0, 40, 1, v => `${v}px`],
-    ['barFontSize', '甘特条字号', 7, 12, 0.5, v => `${v}px`],
-    ['barHeight', '甘特条高度', 6, 18, 1, v => `${v}px`],
-    ['width', '挂件宽度', 320, 600, 10, v => `${v}px`],
+    ['panelOpacity', '玻璃不透明度', ...A.LIMITS.panelOpacity, v => `${v}%`],
+    ['width', '挂件宽度', ...A.LIMITS.width, v => `${v}px`],
+    ['dateFontSize', '日期字号', ...A.LIMITS.dateFontSize, v => `${v}px`],
+    ['blur', '磨砂强度', ...A.LIMITS.blur, v => `${v}px`],
+    ['barFontSize', '甘特条字号', ...A.LIMITS.barFontSize, v => `${v}px`],
+    ['barHeight', '甘特条高度', ...A.LIMITS.barHeight, v => `${v}px`],
   ];
+  const sliderRows = rows => rows.map(([k, name, min, max, step]) => `<div class="srow"><label for="st_${k}">${name}</label>`
+    + `<input type="range" id="st_${k}" min="${min}" max="${max}" step="${step}"><output id="st_${k}_out" for="st_${k}"></output></div>`).join('');
   const state = () => W2App.App.state;
 
   function build() {
     page.innerHTML = `
       <div class="page-head"><button type="button" class="ghost" id="stBack">‹ 返回</button><h2>设置</h2></div>
       <div class="group"><h3>桌面挂件外观</h3>
-        <div class="srow"><label for="st_panelColor">底板颜色</label><input type="color" id="st_panelColor"><span></span></div>
-        ${SLIDERS.map(([k, name, min, max, step]) => `<div class="srow"><label for="st_${k}">${name}</label>`
-          + `<input type="range" id="st_${k}" min="${min}" max="${max}" step="${step}"><output id="st_${k}_out"></output></div>`).join('')}
-        <div class="srow"><label for="st_textColor">字体颜色</label><input type="color" id="st_textColor"><output id="stContrast"></output></div>
+        ${sliderRows(SLIDERS.slice(0, 4))}
+        <div class="srow"><label for="st_panelColor">玻璃底色</label><input type="color" id="st_panelColor"><span></span></div>
+        <div class="srow"><label for="st_textColor">文字颜色</label><input type="color" id="st_textColor"><output id="stContrast"></output></div>
         <div class="warn" id="stContrastWarn" hidden>对比度偏低，小字可能看不清</div>
+        ${sliderRows(SLIDERS.slice(4))}
         <div class="warn" id="stBarWarn" hidden>条高太小，文字可能被裁切</div>
         <div class="btn-row"><button type="button" class="plain-btn" id="stReset">恢复默认</button></div>
       </div>
@@ -65,13 +69,32 @@ const Settings = (() => {
     q('stBarWarn').hidden = ap.barHeight >= ap.barFontSize + 2;
   }
 
-  const saveAp = (patch, msg) => rc.saveSettings({ w1: { appearance: patch } }).then(res => W2App.report(res, msg || '已保存'));
+  async function saveAp(patch, msg) {
+    const revision = ++appearanceRevision;
+    editingAppearance = false;
+    let res;
+    try { res = await rc.saveSettings({ w1: { appearance: patch } }); }
+    catch (_) { res = { ok: false }; }
+    // 新一轮拖动已经开始时，不用上一轮保存的回调覆盖当前预览。
+    if (revision === appearanceRevision) {
+      rc.previewAppearance(null);
+      render();
+    }
+    W2App.report(res, msg || '已保存');
+    return res;
+  }
 
   function wire() {
     q('stBack').addEventListener('click', close);
     for (const key of ['panelColor', 'textColor', ...SLIDERS.map(s => s[0])]) {
       const el = q(`st_${key}`);
-      el.addEventListener('input', () => { const ap = current(); updateHints(ap); rc.previewAppearance(ap); });
+      el.addEventListener('input', () => {
+        editingAppearance = true;
+        appearanceRevision++;
+        const ap = current();
+        updateHints(ap);
+        rc.previewAppearance(ap);
+      });
       el.addEventListener('change', () => { const ap = current(); saveAp({ [key]: ap[key] }); });   // 松手 / 选完颜色后才保存
     }
     q('stReset').addEventListener('click', () => saveAp(DEFAULT_AP, '已恢复默认外观'));
@@ -95,11 +118,13 @@ const Settings = (() => {
   // 用最新数据刷新控件（保存成功后主进程会推新数据过来）
   function render() {
     if (!isOpenFlag || !page.firstChild) return;
-    const s = state(), ap = s.settings.w1.appearance, w1 = s.w1;
-    q('st_panelColor').value = ap.panelColor.toLowerCase();
-    q('st_textColor').value = ap.textColor.toLowerCase();
-    for (const [k] of SLIDERS) q(`st_${k}`).value = ap[k];
-    updateHints(ap);
+    const s = state(), ap = A.normalize(s.settings.w1.appearance), w1 = s.w1;
+    if (!editingAppearance) {
+      q('st_panelColor').value = ap.panelColor.toLowerCase();
+      q('st_textColor').value = ap.textColor.toLowerCase();
+      for (const [k] of SLIDERS) q(`st_${k}`).value = ap[k];
+    }
+    updateHints(editingAppearance ? current() : ap);
     q('stW1State').textContent = !w1.pinned ? '摆放中：可以拖动桌面挂件，摆好后点「钉住」'
       : w1.degraded ? '桌面嵌入失败，已切换为置底显示' : '已钉住在桌面上';
     q('stPin').textContent = w1.pinned ? '解锁桌面挂件' : '钉住桌面挂件';
@@ -121,6 +146,8 @@ const Settings = (() => {
   function close() {
     if (!isOpenFlag) return;
     isOpenFlag = false;
+    editingAppearance = false;
+    appearanceRevision++;
     page.hidden = true;
     page.innerHTML = '';
     rc.previewAppearance(null);   // 丢掉没保存的预览

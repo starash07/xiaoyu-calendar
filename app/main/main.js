@@ -111,5 +111,5 @@ function start() {
   app.on('window-all-closed', () => { /* 常驻托盘，不因为窗口都关了就退出 */ });
   app.on('before-quit', () => { w1.destroy(); w2.destroy(); });
 
-  if (P.SELFTEST) require('./selftest').run({ store, w1, w2, broadcast });
+  if (P.SELFTEST) require(process.argv.includes('--desktop-smoke') ? './w1-smoke-selftest' : './selftest').run({ store, w1, w2, broadcast });
 }

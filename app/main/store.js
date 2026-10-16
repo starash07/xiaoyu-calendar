@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const P = require('./paths');
 const D = require('../renderer/shared/dates');
 const C = require('../renderer/shared/colors');
+const A = require('../renderer/shared/appearance');
 const R = require('./reminders');
 
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -17,8 +18,8 @@ const DEFAULT_SETTINGS = {
   version: 1,
   w1: {
     pinned: false, x: null, y: null,
-    // 字体颜色的初始默认值要在 Demo 里调，这里先用白色
-    appearance: { panelColor: '#000000', panelOpacity: 28, blur: 14, textColor: '#FFFFFF', barFontSize: 10, barHeight: 12, width: 420 },
+    appearanceVersion: A.VERSION,
+    appearance: { ...A.DEFAULT },
   },
   w2: { dock: null, x: null, y: null, width: 480, height: 720, theme: 'light' },
   // 统一提醒选项。默认勾哪些、提前几天还没定，这里是 Demo 的临时默认
@@ -100,6 +101,8 @@ class Store {
     const r = readJson(P.REMINDERS, { version: 1, lastRefreshDate: null, items: [] });
     this.tasks = Array.isArray(t.data.tasks) ? t.data.tasks : [];
     this.settings = merge(DEFAULT_SETTINGS, s.data);
+    this.settings.w1.appearance = A.migrate(s.data.w1?.appearance, s.data.w1?.appearanceVersion);
+    this.settings.w1.appearanceVersion = A.VERSION;
     this.reminders = { lastRefreshDate: r.data.lastRefreshDate || null, items: Array.isArray(r.data.items) ? r.data.items : [] };
     this.recovered = [['日程', t.recovered], ['设置', s.recovered], ['提醒记录', r.recovered]].filter(([, how]) => how);
     this.listeners = new Set();
@@ -176,6 +179,8 @@ class Store {
 
   saveSettings(patch) {
     const settings = merge(this.settings, patch);
+    settings.w1.appearance = A.normalize(settings.w1.appearance);
+    settings.w1.appearanceVersion = A.VERSION;
     const reminders = patch.reminder ? this.regenerate(this.tasks, settings, this.reminders) : null;
     return this.commit({ settings, reminders });
   }
