@@ -12,6 +12,11 @@
     panelOpacity: [0, 100, 1], width: [320, 600, 10], dateFontSize: [13, 22, 1],
     blur: [0, 40, 1], barFontSize: [7, 12, 0.5], barHeight: [6, 18, 1],
   });
+  const GLASS_LEVELS = Object.freeze([
+    { value: 0, label: '关闭' }, { value: 14, label: '轻磨砂' }, { value: 40, label: '柔雾' },
+  ]);
+  // 保留旧文件中的 blur 值，按范围映射原生效果；系统接口不提供像素半径。
+  const glassLevel = value => Number(value) <= 0 ? 0 : Number(value) <= 20 ? 14 : 40;
 
   function normalize(value) {
     const saved = value && typeof value === 'object' ? value : {};
@@ -43,5 +48,5 @@
     return normalize(saved);
   }
 
-  return { VERSION, DEFAULT, LIMITS, normalize, migrate };
+  return { VERSION, DEFAULT, LIMITS, GLASS_LEVELS, glassLevel, normalize, migrate };
 });

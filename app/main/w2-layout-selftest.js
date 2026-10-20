@@ -113,7 +113,8 @@ async function run({ store, w2, broadcast, note, shot }) {
 
     await js(`TaskDialog.open({ mode: 'new', start: W2App.App.state.today, end: W2App.App.state.today })`);
     await wait(350);
-    assert.ok(win.getBounds().height >= Math.min(640, w2.maxHeight), '新建弹窗没有足够的填写高度');
+    const formHeight = await js(`Number.parseFloat(document.getElementById('appShell').style.getPropertyValue('--dialog-height'))`);
+    assert.ok(win.getBounds().height >= Math.min(formHeight, w2.maxHeight), '新建弹窗没有按实际内容留出填写高度');
     await js('TaskDialog.close()');
     await wait(350);
     sameHeight(win.getBounds().height, base.height);

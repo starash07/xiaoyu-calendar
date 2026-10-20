@@ -8,7 +8,11 @@
   "scripts": {
     "start": "electron .",
     "selftest": "electron . --selftest",
-    "selftest:desktop": "electron . --selftest --desktop-smoke",
+    "selftest:desktop": "electron . --selftest --desktop-host-smoke",
+    "selftest:desktop-ui": "electron . --selftest --desktop-smoke",
+    "selftest:desktop-headless": "electron . --selftest --desktop-headless",
+    "selftest:calendar-selection": "electron scripts/check-calendar-selection.cjs --selftest",
+    "selftest:task-dialog": "electron scripts/check-task-dialog.cjs --selftest",
     "preview:main": "node scripts/preview-main.js --serve",
     "postinstall": "node node_modules/electron/install.js"
   },

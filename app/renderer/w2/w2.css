@@ -21,6 +21,8 @@
   --done-fg: #8b98a1;
   --danger: #c0575c;
   --shadow: 0 14px 38px #274d6930;
+  /* 日期与主面板可点击控件共用白色细描边箭头；14.52px，热点对齐尖端。 */
+  --date-cursor: url("date-cursor.svg") 3 1, default;
 }
 
 * { box-sizing: border-box; }
@@ -36,6 +38,7 @@ body {
 /* 根页面保持透明，所有有底色的内容在同一个圆角面板内裁切。 */
 .app-shell {
   --corner: 16px;
+  position: relative;
   display: flex;
   flex-direction: column;
   max-height: var(--available-height, 1000px);
@@ -46,10 +49,11 @@ body {
   clip-path: inset(0 round var(--corner));
   background: var(--bg);
 }
-.app-shell.editing { min-height: min(640px, var(--available-height, 1000px)); }
+.app-shell.editing { min-height: min(var(--dialog-height, 420px), var(--available-height, 1000px)); }
+.app-shell.settings-open { min-height: min(640px, var(--available-height, 1000px)); }
 
 button, input, textarea { font: inherit; }
-button { color: inherit; cursor: pointer; transition: background-color .15s, color .15s, transform .15s; }
+button { color: inherit; cursor: var(--date-cursor); transition: background-color .15s, color .15s, transform .15s; }
 button:disabled { opacity: .5; cursor: wait; }
 button:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid #5f93b6; outline-offset: 2px; }
 button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
@@ -118,7 +122,7 @@ button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke
   border-radius: 12px;
   background: #fff5ec;
   text-align: left;
-  cursor: pointer;
+  cursor: var(--date-cursor);
   opacity: 0;
   pointer-events: none;
   transform-origin: top center;
@@ -139,16 +143,14 @@ button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke
 .rm-ok { min-height: 26px; padding: 0 11px; border: 1px solid #efdcc8; border-radius: 8px; background: #fff; color: #a0603f; font-size: 12px; font-weight: 600; line-height: 24px; }
 .rm-ok:hover { background: #fff0e2; }
 
-.newbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex: 0 0 auto; padding: 7px 10px; margin-bottom: 9px; border-radius: 9px; background: #eaf5fb; color: #527fa0; font-size: 10px; }
-.newbar button { border: 0; background: none; color: #527fa0; white-space: nowrap; }
 .calwrap { flex: 0 0 auto; min-height: 0; position: relative; padding: 10px 0 8px; }
 #cal { display: flex; flex-direction: column; }
 .cal-wd { flex: 0 0 auto; height: 22px; margin-bottom: 8px; padding: 0; align-items: start; color: #9db0bc; font-size: 11px; font-weight: 600; letter-spacing: 2px; text-indent: 2px; text-align: center; }
 .cal-wd span { padding: 0; }
 .cal-wd span:nth-child(n+6) { color: var(--weekend); }
 /* 基础周行随宽度缩放；日程增多时由内容撑高，不截断连续日程条。 */
-.cal-week { position: relative; flex: 0 0 auto; min-height: var(--week-height, 58px); margin: 0; padding: 3px 0 8px; border-top: 1px solid #eaf0f3; }
-.cal-dates { height: 28px; align-items: center; color: #31597a; font: 17px/1 Bahnschrift, "Segoe UI", "Microsoft YaHei UI", sans-serif; font-variant-numeric: tabular-nums; }
+.cal-week { position: relative; flex: 0 0 auto; min-height: var(--week-height, 58px); margin: 0; padding: 3px 0 8px; border-top: 1px solid #eaf0f3; cursor: var(--date-cursor); touch-action: none; }
+.cal-dates { position: relative; z-index: 1; height: 28px; align-items: center; color: #31597a; font: 17px/1 Bahnschrift, "Segoe UI", "Microsoft YaHei UI", sans-serif; font-variant-numeric: tabular-nums; }
 .cal-dc { height: 28px; display: flex; align-items: center; justify-content: center; padding: 0; }
 .cal-dc:nth-child(n+6) { color: var(--weekend); font-weight: 500; }
 .cal-dc.out { color: #c3cfd6; }
@@ -157,13 +159,13 @@ button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke
 .cal-dc.today .date-number { background: var(--today-bg); color: var(--today); font-weight: 600; }
 .cal-lanes { margin-top: 6px; }
 .cal-lanes:empty { margin-top: 0; }
-.calwrap .cal-bar { cursor: pointer; font-weight: 400; letter-spacing: 0; transition: transform .15s ease, filter .15s ease, box-shadow .15s ease; }
+.calwrap .cal-bar { cursor: var(--date-cursor); font-weight: 400; letter-spacing: 0; transition: transform .15s ease, filter .15s ease, box-shadow .15s ease; }
 .calwrap .cal-bar.hot, .calwrap .cal-bar.sel { filter: brightness(.98) saturate(1.08); transform: translateY(-1px); box-shadow: none; z-index: 2; }
 .cal-bar.is-pinned::before { content: ""; display: inline-block; width: 4px; height: 4px; margin: -1px 5px 0 0; border-radius: 50%; background: currentColor; vertical-align: middle; opacity: .8; }
-.calwrap.newmode { cursor: crosshair; }
-.calwrap.newmode .cal-bar { cursor: crosshair; }
+/* 拖选越过日程条或移出日历时仍保持同一光标，由系统直接跟随鼠标。 */
+body:has(.calwrap.selecting), body:has(.calwrap.selecting) * { cursor: var(--date-cursor) !important; }
 .cal-dc.hov .date-number { background: #e8f3fb; color: #447da5; }
-.cal-preview { position: absolute; height: 15px; border-radius: 999px; background: #91c7e8; opacity: .65; pointer-events: none; z-index: 3; }
+.cal-preview { position: absolute; border-radius: 8px; background: #d9edf9; opacity: .8; pointer-events: none; z-index: 0; }
 .empty { margin: 14px 0 8px; text-align: center; font-size: 11px; color: var(--fg3); }
 .empty button { padding: 0 4px; border: 0; background: none; color: #a0603f; }
 
@@ -174,16 +176,13 @@ button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke
 .month-step:hover { background: rgba(255, 255, 255, .8); color: #3f7598; }
 .month-step svg { width: 15px; height: 15px; stroke-width: 1.8; }
 .month-label { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: #3f7598; font-size: 14px; font-weight: 600; letter-spacing: .3px; }
-.today-button, .new-button, .range-entry { height: 40px; flex: 0 0 auto; border: 0; border-radius: 999px; font-size: 12px; }
+.today-button, .new-button { height: 40px; flex: 0 0 auto; border: 0; border-radius: 999px; font-size: 12px; }
 .today-button { padding: 0 15px; background: #f1f5f7; color: #5e7e92; }
 .today-button:hover { background: #e7eef2; }
 .new-button { padding: 0 15px; background: #fff4e9; color: #a0603f; font-weight: 600; }
 .new-button:hover { background: #ffecda; }
 .new-button span { margin-right: 5px; font-size: 14px; font-weight: 400; }
-.range-entry { width: 34px; padding: 0; display: grid; place-items: center; background: #f1f5f7; color: #7894a6; }
-.range-entry:hover { background: #e7eef2; color: #557e98; }
-.range-entry svg { width: 15px; height: 15px; }
-.today-button:active, .new-button:active, .range-entry:active { transform: translateY(1px); }
+.today-button:active, .new-button:active { transform: translateY(1px); }
 
 /* 详情从窗口最下方展开；悬停预览，点选后才显示操作按钮。 */
 .detail-section { position: relative; flex: 0 0 auto; height: 0; margin: 0 16px; overflow: hidden; opacity: 0; transition: height .24s cubic-bezier(.22, 1, .36, 1), margin-top .24s cubic-bezier(.22, 1, .36, 1), opacity .16s ease; }
@@ -208,9 +207,51 @@ button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke
 .toast.bad { background: var(--danger); }
 
 /* 填写弹窗 */
-.overlay { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 16px; background: #39576d32; }
-.dialog { width: 100%; max-width: 440px; max-height: 100%; overflow-y: auto; padding: 20px; border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); user-select: text; }
-.dialog h3 { margin: 0 0 14px; font-size: 16px; font-weight: 500; }
+.overlay { position: absolute; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 12px; background: #39576d32; }
+.dialog { display: flex; flex-direction: column; width: 100%; max-width: 440px; max-height: 100%; overflow: hidden; border: 1px solid var(--rule); border-radius: 16px; background: var(--surface); box-shadow: 0 10px 32px #274d6924; user-select: text; }
+.dialog-header { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px 12px; }
+.dialog h3 { flex: 0 0 auto; margin: 0; font-size: 16px; font-weight: 600; }
+.dialog-scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.dialog-fields { display: grid; gap: 12px; padding: 0 15px 16px 20px; }
+.dialog .field { margin: 0; }
+.dialog .field > label { margin-bottom: 5px; font-size: 11px; }
+.dialog .optional { margin-left: 5px; color: var(--fg3); font-size: 10px; font-weight: 400; }
+.dialog .field input[type=text], .dialog .field input[type=date], .dialog .field textarea { padding: 8px 10px; border-color: #e5edf2; border-radius: 9px; background: #f7fafc; }
+.dialog .field #dlgTitle { height: 38px; background: #fff; font-size: 14px; }
+.dialog .field textarea { display: block; height: 58px; min-height: 58px; max-height: 140px; resize: vertical; line-height: 1.6; }
+.dialog input::placeholder, .dialog textarea::placeholder { color: #a0b1bd; }
+.dialog .row2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.dialog-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; user-select: none; }
+.editor-tool, .pin-tool { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 30px; padding: 4px 10px; border: 1px solid transparent; border-radius: 8px; background: #f1f6f9; color: #607e93; font-size: 11px; cursor: var(--date-cursor); }
+.editor-tool:hover, .pin-tool:hover { background: #e9f1f6; }
+.editor-tool[aria-expanded=true] { border-color: #d3e3ef; background: #eaf3f9; color: #456d8b; }
+.editor-tool svg { width: 13px; height: 13px; }
+.editor-tool .tool-chevron { width: 11px; height: 11px; transition: transform .16s ease; }
+.editor-tool[aria-expanded=true] .tool-chevron { transform: rotate(180deg); }
+.color-dot { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1px #31587312; }
+.pin-tool { margin-left: auto; }
+.pin-tool input { margin: 0; width: 12px; height: 12px; }
+.pin-tool:has(input:checked) { background: #e9f4ef; color: #4e8875; }
+.editor-drawer { min-width: 0; padding: 12px; border-radius: 10px; background: #f7fafc; animation: drawer-in .16s ease-out; }
+.editor-drawer .swatches { gap: 9px; padding: 3px; }
+.editor-drawer .swatch { width: 23px; height: 23px; }
+.editor-drawer .custom-color { margin-top: 10px; }
+.editor-drawer .custom-color label { margin-right: auto; font-size: 11px; color: var(--fg2); }
+.remind-mode { display: flex; gap: 16px; }
+.remind-mode .check { margin: 0; font-size: 11px; }
+.remind-summary { margin: 9px 0 0; color: var(--fg2); font-size: 11px; line-height: 1.6; }
+.dialog .remind-grid { margin-top: 10px; padding: 0; gap: 5px 8px; }
+.dialog .remind-grid .check { gap: 4px; margin: 0; font-size: 11px; }
+.dialog .remind-grid input[type=number] { width: 40px; }
+.dialog .err { margin-top: 5px; font-size: 11px; }
+.dialog #errDate { margin: -6px 0 0; }
+.dialog-footer { flex: 0 0 auto; padding: 12px 20px; border-top: 1px solid var(--rule); background: #fff; }
+.dialog-footer .actions { margin: 0; }
+.dialog-footer .err { margin: 0 0 8px; }
+.dialog-footer .primary { min-width: 76px; background: #608ba6; border-radius: 8px; }
+.dialog-footer .primary:hover { background: #4d7893; }
+.dialog-footer .plain-btn { border-color: transparent; background: #f1f5f7; color: var(--fg2); border-radius: 8px; }
+@keyframes drawer-in { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
 .field { margin-bottom: 12px; }
 .field > label, .field-label { display: block; margin-bottom: 4px; font-size: 12px; color: var(--fg2); }
 .field input[type=text], .field input[type=date], .field input[type=number], .field textarea { width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid var(--rule2); border-radius: 6px; background: var(--field); color: var(--fg); font: inherit; }
@@ -218,7 +259,7 @@ button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke
 .row2 { display: flex; gap: 10px; }
 .row2 > .field { flex: 1; min-width: 0; }
 .err { margin-top: 4px; font-size: 12px; color: var(--danger); }
-.preview-bar { height: 22px; line-height: 22px; padding: 0 6px; margin-bottom: 14px; border-radius: 999px; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.preview-bar { width: 144px; min-width: 0; height: 22px; line-height: 22px; padding: 0 9px; border-radius: 7px; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .swatches { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .swatch { width: 22px; height: 22px; border: 0; border-radius: 50%; padding: 0; box-shadow: none; }
 .swatch.on { box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--hl); }
@@ -226,7 +267,7 @@ button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke
 .custom-color { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
 .custom-color input[type=color] { width: 30px; height: 26px; padding: 0; border: 1px solid var(--rule2); border-radius: 5px; background: none; }
 .custom-color input[type=text] { width: 96px; padding: 4px 6px; border: 1px solid var(--rule2); border-radius: 5px; background: var(--field); color: var(--fg); font: inherit; }
-.check { display: flex; align-items: center; gap: 6px; margin: 4px 0; font-size: 12px; cursor: pointer; }
+.check { display: flex; align-items: center; gap: 6px; margin: 4px 0; font-size: 12px; cursor: var(--date-cursor); }
 input[type=checkbox], input[type=radio], input[type=range] { accent-color: #668eac; }
 .remind-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; margin-top: 6px; padding-left: 22px; }
 .remind-grid input[type=number] { width: 48px; padding: 2px 4px; border: 1px solid var(--rule2); border-radius: 4px; background: var(--field); color: var(--fg); font: inherit; }
@@ -234,7 +275,6 @@ input[type=checkbox], input[type=radio], input[type=range] { accent-color: #668e
 .hint { font-size: 12px; color: var(--fg3); }
 .actions { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
 .actions .spacer { flex: 1; }
-.dialog .actions { position: sticky; bottom: -20px; z-index: 3; margin: 16px -20px -20px; padding: 12px 20px; background: #fff; border-top: 1px solid var(--rule); }
 .plain-btn, .danger-btn { min-height: 31px; padding: 4px 13px; border: 1px solid var(--rule2); border-radius: 6px; background: #fff; }
 .plain-btn:hover, .danger-btn:hover { background: var(--hover); }
 .danger-btn { color: var(--danger); }
@@ -251,6 +291,7 @@ input[type=checkbox], input[type=radio], input[type=range] { accent-color: #668e
 .srow { display: grid; grid-template-columns: 96px 1fr 64px; align-items: center; gap: 10px; min-height: 36px; }
 .srow input[type=range] { width: 100%; accent-color: var(--accent); }
 .srow input[type=color] { width: 40px; height: 26px; padding: 0; border: 1px solid var(--rule2); border-radius: 5px; background: none; }
+.srow select { width: 100%; min-height: 28px; padding: 3px 8px; border: 1px solid var(--rule2); border-radius: 6px; background: var(--surface); color: var(--fg); font: inherit; }
 .srow output { text-align: right; font-variant-numeric: tabular-nums; color: var(--fg2); }
 .warn { margin: 4px 0 0 106px; font-size: 12px; color: var(--danger); }
 .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
@@ -266,7 +307,6 @@ input[type=checkbox], input[type=radio], input[type=range] { accent-color: #668e
   .bottom-bar, .detail-section { margin-left: 14px; margin-right: 14px; }
   .today-button, .new-button { padding: 0 10px; }
   .month-pill { padding: 0 2px; }
-  .range-entry { width: 32px; }
   .row2 { gap: 6px; }
   .remind-grid { padding-left: 0; gap: 2px 4px; }
 }

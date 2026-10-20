@@ -5,6 +5,8 @@ const TaskDialog = (() => {
   const q = id => document.getElementById(id);
   let ctx = null;          // { mode: 'new' | 'edit', taskId, color }
   let confirmCtx = null;   // { id }
+  let layoutObserver = null;
+  let layoutFrame = 0;
 
   const state = () => W2App.App.state;
 
@@ -18,6 +20,7 @@ const TaskDialog = (() => {
   }
 
   function open({ mode, task, start, end }) {
+    layoutObserver?.disconnect();
     const st = state();
     const t = task || {
       title: '', startDate: start, endDate: end, note: '', pinned: false, remind: null,
@@ -25,63 +28,129 @@ const TaskDialog = (() => {
     };
     ctx = { mode, taskId: task ? task.id : null, color: t.color.toUpperCase() };
     const g = st.settings.reminder, r = t.remind || g;
+    const chevron = '<svg class="tool-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>';
     modal.innerHTML = `
       <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlgHead">
-        <h3 id="dlgHead">${mode === 'new' ? '新建日程' : '编辑日程'}</h3>
-        <div class="preview-bar" id="dlgPreview"></div>
-        <div class="field"><label for="dlgTitle">标题</label>
-          <input type="text" id="dlgTitle" maxlength="50" value="${K.esc(t.title)}">
-          <div class="err" id="errTitle" hidden></div></div>
-        <div class="row2">
-          <div class="field"><label for="dlgStart">开始日期</label><input type="date" id="dlgStart" value="${t.startDate}"></div>
-          <div class="field"><label for="dlgEnd">结束日期</label><input type="date" id="dlgEnd" value="${t.endDate}"></div>
+        <div class="dialog-header">
+          <h3 id="dlgHead">${mode === 'new' ? '新建日程' : '编辑日程'}</h3>
+          <div class="preview-bar" id="dlgPreview" aria-label="日程条预览"></div>
         </div>
-        <div class="err" id="errDate" hidden style="margin:-6px 0 10px"></div>
-        <div class="field"><span class="field-label">颜色</span>
-          <div class="swatches" id="dlgPresets"></div>
-          <div id="dlgRecentWrap"><div class="sw-sub">最近使用</div><div class="swatches" id="dlgRecent"></div></div>
-          <div class="custom-color"><input type="color" id="dlgPicker" title="取色器"><input type="text" id="dlgHex" maxlength="7" spellcheck="false"></div>
-        </div>
-        <div class="field"><label for="dlgNote">备注</label><textarea id="dlgNote" maxlength="500">${K.esc(t.note)}</textarea></div>
-        <label class="check"><input type="checkbox" id="dlgPinned" ${t.pinned ? 'checked' : ''}> 置顶（排在其他日程前面）</label>
-        <div class="field" style="margin-top:10px"><span class="field-label">提醒</span>
-          <label class="check"><input type="radio" name="dlgRemind" value="global" ${t.remind ? '' : 'checked'}> 沿用统一设置（${remindSummary(g)}）</label>
-          <label class="check"><input type="radio" name="dlgRemind" value="custom" ${t.remind ? 'checked' : ''}> 这条日程单独设置</label>
-          <div class="remind-grid${t.remind ? '' : ' off'}" id="dlgRemindGrid">
-            <label class="check"><input type="checkbox" id="rSB" ${r.startBefore.on ? 'checked' : ''}> 开始前 <input type="number" id="rSBd" min="1" max="365" value="${r.startBefore.days}"> 天</label>
-            <label class="check"><input type="checkbox" id="rSD" ${r.startDay ? 'checked' : ''}> 开始当天</label>
-            <label class="check"><input type="checkbox" id="rEB" ${r.endBefore.on ? 'checked' : ''}> 结束前 <input type="number" id="rEBd" min="1" max="365" value="${r.endBefore.days}"> 天</label>
-            <label class="check"><input type="checkbox" id="rED" ${r.endDay ? 'checked' : ''}> 结束当天</label>
+        <div class="dialog-scroll">
+          <div class="dialog-fields">
+            <div class="field"><label for="dlgTitle">标题</label>
+              <input type="text" id="dlgTitle" maxlength="50" placeholder="日程名称" autocomplete="off" value="${K.esc(t.title)}">
+              <div class="err" id="errTitle" role="alert" hidden></div></div>
+            <div class="row2">
+              <div class="field"><label for="dlgStart">开始日期</label><input type="date" id="dlgStart" value="${t.startDate}"></div>
+              <div class="field"><label for="dlgEnd">结束日期</label><input type="date" id="dlgEnd" value="${t.endDate}"></div>
+            </div>
+            <div class="err" id="errDate" role="alert" hidden></div>
+            <div class="field"><label for="dlgNote">备注<span class="optional">选填</span></label>
+              <textarea id="dlgNote" maxlength="500" rows="2" placeholder="补充一些细节">${K.esc(t.note)}</textarea></div>
+            <div class="dialog-tools">
+              <button type="button" class="editor-tool" id="dlgColorToggle" aria-controls="dlgColorPanel" aria-expanded="false"><span class="color-dot" id="dlgColorDot" aria-hidden="true"></span>颜色${chevron}</button>
+              <button type="button" class="editor-tool" id="dlgRemindToggle" aria-controls="dlgRemindPanel" aria-expanded="false"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8a5 5 0 0 1 10 0v4l1.5 2h-13L5 12V8Zm3 8h4"/></svg><span id="dlgRemindLabel"></span>${chevron}</button>
+              <label class="pin-tool" title="排在其他日程前面"><input type="checkbox" id="dlgPinned" ${t.pinned ? 'checked' : ''}>置顶</label>
+            </div>
+            <div class="editor-drawer" id="dlgColorPanel" aria-label="日程颜色" hidden>
+              <div class="swatches" id="dlgPresets"></div>
+              <div id="dlgRecentWrap"><div class="sw-sub">最近使用</div><div class="swatches" id="dlgRecent"></div></div>
+              <div class="custom-color"><label for="dlgPicker">自定义</label><input type="color" id="dlgPicker" title="取色器"><input type="text" id="dlgHex" aria-label="颜色 HEX 值" maxlength="7" spellcheck="false"></div>
+            </div>
+            <div class="editor-drawer" id="dlgRemindPanel" aria-label="日程提醒" hidden>
+              <div class="remind-mode">
+                <label class="check"><input type="radio" name="dlgRemind" value="global" ${t.remind ? '' : 'checked'}>沿用统一设置</label>
+                <label class="check"><input type="radio" name="dlgRemind" value="custom" ${t.remind ? 'checked' : ''}>单独设置</label>
+              </div>
+              <p class="remind-summary" id="dlgGlobalSummary" ${t.remind ? 'hidden' : ''}>${remindSummary(g)}</p>
+              <div class="remind-grid" id="dlgRemindGrid" ${t.remind ? '' : 'hidden'}>
+                <label class="check"><input type="checkbox" id="rSB" ${r.startBefore.on ? 'checked' : ''}>开始前 <input type="number" id="rSBd" aria-label="开始前几天提醒" min="1" max="365" value="${r.startBefore.days}"> 天</label>
+                <label class="check"><input type="checkbox" id="rSD" ${r.startDay ? 'checked' : ''}>开始当天</label>
+                <label class="check"><input type="checkbox" id="rEB" ${r.endBefore.on ? 'checked' : ''}>结束前 <input type="number" id="rEBd" aria-label="结束前几天提醒" min="1" max="365" value="${r.endBefore.days}"> 天</label>
+                <label class="check"><input type="checkbox" id="rED" ${r.endDay ? 'checked' : ''}>结束当天</label>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="err" id="errSave" hidden></div>
-        <div class="actions">
-          ${mode === 'edit' ? '<button type="button" class="danger-btn" id="dlgDelete">删除</button>' : ''}
-          <div class="spacer"></div>
-          <button type="button" class="plain-btn" id="dlgCancel">取消</button>
-          <button type="button" class="primary" id="dlgSave">保存</button>
+        <div class="dialog-footer">
+          <div class="err" id="errSave" role="alert" hidden></div>
+          <div class="actions">
+            ${mode === 'edit' ? '<button type="button" class="danger-btn" id="dlgDelete">删除</button>' : ''}
+            <div class="spacer"></div>
+            <button type="button" class="plain-btn" id="dlgCancel">取消</button>
+            <button type="button" class="primary" id="dlgSave">保存</button>
+          </div>
         </div>
       </div>`;
     modal.hidden = false;
     wire();
     paintColors();
     updatePreview();
+    updateRemindLabel();
+    layoutObserver = new ResizeObserver(() => {
+      if (layoutFrame) return;
+      layoutFrame = requestAnimationFrame(() => { layoutFrame = 0; measureDialog(); });
+    });
+    modal.querySelectorAll('.dialog-header, .dialog-fields, .dialog-footer').forEach(el => layoutObserver.observe(el));
+    measureDialog();
     q('dlgTitle').focus();
     W2App.refreshBlock();
+  }
+
+  // 按完整表单内容申请窗口空间；空间不足时只滚动中间区域，操作按钮固定。
+  function measureDialog() {
+    if (!ctx) return;
+    const styles = getComputedStyle(modal);
+    const panel = $('appShell'), panelStyle = getComputedStyle(panel);
+    const height = [...modal.querySelectorAll('.dialog-header, .dialog-fields, .dialog-footer')]
+      .reduce((sum, el) => sum + el.getBoundingClientRect().height, 2)
+      + parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom)
+      + parseFloat(panelStyle.borderTopWidth) + parseFloat(panelStyle.borderBottomWidth);
+    panel.style.setProperty('--dialog-height', `${Math.ceil(height)}px`);
+  }
+
+  function togglePanel(name) {
+    const opening = q(`dlg${name}Panel`).hidden;
+    for (const part of ['Color', 'Remind']) {
+      const show = opening && part === name;
+      q(`dlg${part}Panel`).hidden = !show;
+      q(`dlg${part}Toggle`).setAttribute('aria-expanded', String(show));
+    }
+  }
+
+  function readReminder() {
+    if (modal.querySelector('input[name="dlgRemind"]:checked').value !== 'custom') return null;
+    return {
+      startBefore: { on: q('rSB').checked, days: +q('rSBd').value || 1 }, startDay: q('rSD').checked,
+      endBefore: { on: q('rEB').checked, days: +q('rEBd').value || 1 }, endDay: q('rED').checked,
+    };
+  }
+
+  function updateRemindLabel() {
+    const custom = readReminder(), rules = custom || state().settings.reminder;
+    const summary = remindSummary(rules);
+    q('dlgRemindLabel').textContent = summary === '不提醒' ? '不提醒' : custom ? '提醒 · 单独' : '提醒 · 统一';
+    q('dlgRemindToggle').title = summary;
   }
 
   function showErr(id, msg) { q(id).textContent = msg; q(id).hidden = false; }
   function hideErr(id) { q(id).hidden = true; }
 
   function wire() {
+    q('dlgColorToggle').addEventListener('click', () => togglePanel('Color'));
+    q('dlgRemindToggle').addEventListener('click', () => togglePanel('Remind'));
     q('dlgTitle').addEventListener('input', () => { hideErr('errTitle'); updatePreview(); });
     q('dlgTitle').addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });   // 标题只有一行，Enter 没有反应
     ['dlgStart', 'dlgEnd'].forEach(id => q(id).addEventListener('input', () => hideErr('errDate')));
     q('dlgPicker').addEventListener('input', e => setColor(e.target.value));
     q('dlgHex').addEventListener('input', e => { const v = e.target.value.trim(); if (C.isHex(v)) setColor(v, true); });
     modal.querySelectorAll('input[name="dlgRemind"]').forEach(el => el.addEventListener('change', () => {
-      q('dlgRemindGrid').classList.toggle('off', modal.querySelector('input[name="dlgRemind"]:checked').value !== 'custom');
+      const custom = modal.querySelector('input[name="dlgRemind"]:checked').value === 'custom';
+      q('dlgRemindGrid').hidden = !custom;
+      q('dlgGlobalSummary').hidden = custom;
+      updateRemindLabel();
     }));
+    q('dlgRemindGrid').addEventListener('input', updateRemindLabel);
     q('dlgCancel').addEventListener('click', close);
     q('dlgSave').addEventListener('click', save);
     const del = q('dlgDelete');
@@ -90,12 +159,13 @@ const TaskDialog = (() => {
 
   function paintColors() {
     const cur = ctx.color;
-    const sw = (hex, title) => `<button type="button" class="swatch${hex.toUpperCase() === cur ? ' on' : ''}" data-c="${hex}" title="${title}" style="background:${hex}"></button>`;
+    const sw = (hex, title) => `<button type="button" class="swatch${hex.toUpperCase() === cur ? ' on' : ''}" data-c="${hex}" title="${title}" aria-label="${title}" aria-pressed="${hex.toUpperCase() === cur}" style="background:${hex}"></button>`;
     q('dlgPresets').innerHTML = C.PRESETS.map(([name, hex]) => sw(hex, name)).join('');
     const recent = state().settings.recentColors || [];
     q('dlgRecentWrap').hidden = !recent.length;
     q('dlgRecent').innerHTML = recent.map(hex => sw(hex, hex)).join('');
     q('dlgPicker').value = cur.toLowerCase();
+    q('dlgColorDot').style.background = cur;
     modal.querySelectorAll('.swatch').forEach(b => { b.onclick = () => setColor(b.dataset.c); });
   }
 
@@ -109,7 +179,7 @@ const TaskDialog = (() => {
   // 顶部预览条：用当前标题和颜色实时画出来，直接看到条上文字的效果
   function updatePreview() {
     const el = q('dlgPreview');
-    el.textContent = q('dlgTitle').value.trim() || '日程标题';
+    el.textContent = q('dlgTitle').value.trim() || '预览';
     el.style.background = ctx.color;
     el.style.color = C.barText(ctx.color);
     if (document.activeElement !== q('dlgHex')) q('dlgHex').value = ctx.color;
@@ -123,11 +193,7 @@ const TaskDialog = (() => {
     else if (endDate < startDate) { showErr('errDate', '结束日期不能早于开始日期'); bad = true; }
     if (bad) return;
     hideErr('errSave');
-    const custom = modal.querySelector('input[name="dlgRemind"]:checked').value === 'custom';
-    const remind = !custom ? null : {
-      startBefore: { on: q('rSB').checked, days: +q('rSBd').value || 1 }, startDay: q('rSD').checked,
-      endBefore: { on: q('rEB').checked, days: +q('rEBd').value || 1 }, endDay: q('rED').checked,
-    };
+    const remind = readReminder();
     const data = { title, startDate, endDate, color: ctx.color, note: q('dlgNote').value, pinned: q('dlgPinned').checked, remind };
     const mode = ctx.mode;
     q('dlgSave').disabled = true;
@@ -155,11 +221,14 @@ const TaskDialog = (() => {
   }
 
   function close() {
-    const wasNew = ctx && ctx.mode === 'new';
+    layoutObserver?.disconnect();
+    layoutObserver = null;
+    cancelAnimationFrame(layoutFrame);
+    layoutFrame = 0;
     ctx = null;
     modal.hidden = true;
     modal.innerHTML = '';
-    if (wasNew) W2App.exitNewMode();   // 取消或保存后都退出新建状态
+    $('appShell').style.removeProperty('--dialog-height');
     W2App.refreshBlock();
   }
 

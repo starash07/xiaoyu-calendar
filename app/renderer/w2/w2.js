@@ -3,8 +3,9 @@ const D = RCDates, C = RCColors, K = RCCal;
 const $ = id => document.getElementById(id);
 const BAR_H = 15, FONT = 10;
 
-const App = { state: null, view: null, hoverId: null, selectedId: null, newMode: false, sel: null };
+const App = { state: null, view: null, hoverId: null, selectedId: null, sel: null };
 const cal = $('cal'), calwrap = $('calwrap');
+let datePointerId = null;
 let reminderIndex = 0, remindersExpanded = false;
 let reminderAnimations = [];
 let shownDetailId = null;
@@ -28,12 +29,16 @@ function measureDetail() {
 new ResizeObserver(reportHeight).observe(shell);
 new ResizeObserver(measureDetail).observe($('detail'));
 // 与 HTML 方案使用同一宽高规则；只在宽度变化时更新，避免高度动画反复触发布局。
-let calendarWidth = 0;
+let calendarWidth = 0, calendarSizeFrame = 0;
 new ResizeObserver(() => {
-  const width = cal.clientWidth;
-  if (width === calendarWidth) return;
-  calendarWidth = width;
-  cal.style.setProperty('--week-height', `${Math.max(56, Math.round(width * .135))}px`);
+  if (calendarSizeFrame) return;
+  calendarSizeFrame = requestAnimationFrame(() => {
+    calendarSizeFrame = 0;
+    const width = cal.clientWidth;
+    if (width === calendarWidth) return;
+    calendarWidth = width;
+    cal.style.setProperty('--week-height', `${Math.max(56, Math.round(width * .135))}px`);
+  });
 }).observe(cal);
 rc.onW2Layout(({ maxHeight }) => {
   availableHeight = maxHeight;
@@ -59,12 +64,13 @@ function report(res, okMsg) {
   else toast('保存失败，已恢复原来的状态', true);
 }
 
-// 新建中 / 有弹窗 / 在设置页 / 输入框有焦点时，告诉主进程别自动收起
+// 拖选中 / 有弹窗 / 在设置页 / 输入框有焦点时，告诉主进程别自动收起
 function refreshBlock() {
   const el = document.activeElement;
   const typing = !!el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
-  rc.setBlock(App.newMode || TaskDialog.isOpen() || Settings.isOpen() || typing);
+  rc.setBlock(!!App.sel || TaskDialog.isOpen() || Settings.isOpen() || typing);
   shell.classList.toggle('editing', (TaskDialog.isOpen() && !TaskDialog.confirmOpen()) || Settings.isOpen());
+  shell.classList.toggle('settings-open', Settings.isOpen());
 }
 document.addEventListener('focusin', refreshBlock);
 document.addEventListener('focusout', () => setTimeout(refreshBlock, 0));
@@ -322,37 +328,18 @@ function goToday() {
 function newTask() {
   if (TaskDialog.isOpen() || !App.state) return;
   Settings.close();
-  exitNewMode();
+  clearSelection();
   select(null);
   const today = D.parse(App.state.today), { y, m } = App.view;
   const day = y === today.getFullYear() && m === today.getMonth() ? App.state.today : D.toStr(new Date(y, m, 1));
   TaskDialog.open({ mode: 'new', start: day, end: day });
 }
 
-// 选日期：保留跨天拖选能力，作为新建的另一种入口。
-function enterNewMode() {
-  if (TaskDialog.isOpen()) return;
-  Settings.close();
-  App.newMode = true;
-  select(null);
-  calwrap.classList.add('newmode');
-  $('newbar').hidden = false;
-  refreshBlock();
-}
-
-function exitNewMode() {
-  App.newMode = false;
-  clearSelection();
-  markHoverDay(null);
-  calwrap.classList.remove('newmode');
-  $('newbar').hidden = true;
-  refreshBlock();
-}
-
+// 日历本身即可选日期；已有日程条保留查看详情的点击行为。
 function dayAt(x, y) {
   const el = document.elementFromPoint(x, y);
   const week = el && el.closest('.cal-week');
-  if (!week) return null;
+  if (!week || !cal.contains(week)) return null;
   const r = week.getBoundingClientRect();
   const col = Math.max(0, Math.min(6, Math.floor((x - r.left) / (r.width / 7))));
   return D.addDays(week.dataset.start, col);
@@ -375,7 +362,8 @@ function drawPreview(e) {
     const i = Math.max(0, D.diff(ws, a)), j = Math.min(6, D.diff(ws, b));
     const div = document.createElement('div');
     div.className = 'cal-preview';
-    div.style.cssText = `left:calc(${i * 100 / 7}% + 2px);width:calc(${(j - i + 1) * 100 / 7}% - 4px);top:${week.querySelector('.cal-lanes').offsetTop}px`;
+    const dates = week.querySelector('.cal-dates');
+    div.style.cssText = `left:calc(${i * 100 / 7}% + 2px);width:calc(${(j - i + 1) * 100 / 7}% - 4px);top:${dates.offsetTop}px;height:${dates.offsetHeight}px`;
     week.appendChild(div);
   });
   const label = $('daylabel');
@@ -386,69 +374,74 @@ function drawPreview(e) {
 
 function clearSelection() {
   App.sel = null;
+  const pointerId = datePointerId;
+  datePointerId = null;
+  if (pointerId !== null && calwrap.hasPointerCapture(pointerId)) calwrap.releasePointerCapture(pointerId);
+  calwrap.classList.remove('selecting');
+  markHoverDay(null);
   cal.querySelectorAll('.cal-preview').forEach(n => n.remove());
   $('daylabel').hidden = true;
+  refreshBlock();
 }
 
-let press = null;
 calwrap.addEventListener('pointerdown', e => {
-  if (e.button === 2 && App.sel) { clearSelection(); return; }   // 拖选中点右键：取消这次拖选
-  if (e.button !== 0) return;
-  if (App.newMode) {
-    const day = dayAt(e.clientX, e.clientY);
-    if (!day) return;
-    App.sel = { a: day, b: day };
-    calwrap.setPointerCapture(e.pointerId);
-    drawPreview(e);
-    return;
-  }
-  const bar = e.target.closest('.cal-bar');
-  press = { x: e.clientX, y: e.clientY, id: bar ? bar.dataset.id : null };
+  if (e.button !== 0 || !e.isPrimary || datePointerId !== null || !App.state
+    || TaskDialog.isOpen() || Settings.isOpen() || e.target.closest('.cal-bar')) return;
+  const day = dayAt(e.clientX, e.clientY);
+  if (!day) return;
+  e.preventDefault();
+  datePointerId = e.pointerId;
+  App.sel = { a: day, b: day };
+  calwrap.setPointerCapture(e.pointerId);
+  select(null);
+  markHoverDay(null);
+  calwrap.classList.add('selecting');
+  refreshBlock();
+  drawPreview(e);
 });
 
 calwrap.addEventListener('pointermove', e => {
-  if (App.newMode) {
+  if (App.sel && e.pointerId === datePointerId) {
     const day = dayAt(e.clientX, e.clientY);
-    markHoverDay(day);
-    if (App.sel) { if (day) App.sel.b = day; drawPreview(e); }   // 拖出日历区域：保留最后经过的那一天
+    if (day) App.sel.b = day;   // 拖出日历区域：保留最后经过的那一天
+    drawPreview(e);
     return;
   }
-  if (press && (e.buttons & 1)) {
-    if (Math.abs(e.clientX - press.x) + Math.abs(e.clientY - press.y) > 4) press = null;
-    return;
-  }
-  if (!App.selectedId) { const bar = e.target.closest('.cal-bar'); setHover(bar ? bar.dataset.id : null); }
+  if (e.buttons || TaskDialog.isOpen() || Settings.isOpen()) return;
+  const bar = e.target.closest('.cal-bar');
+  markHoverDay(bar ? null : dayAt(e.clientX, e.clientY));
+  if (!App.selectedId) setHover(bar ? bar.dataset.id : null);
 });
 
-calwrap.addEventListener('pointerup', () => {
-  if (App.newMode) {
-    if (!App.sel) return;
-    const [a, b] = ordered();
-    clearSelection();
-    TaskDialog.open({ mode: 'new', start: a, end: b });
-    return;
-  }
-  if (!press) return;
-  const id = press.id;
-  press = null;
-  select(id);   // 点条选中；点空白取消选中
+calwrap.addEventListener('pointerup', e => {
+  if (e.button !== 0 || e.pointerId !== datePointerId || !App.sel) return;
+  const day = dayAt(e.clientX, e.clientY);
+  if (day) App.sel.b = day;
+  const [a, b] = ordered();
+  // 先打开弹窗再结束拖选，使阻止自动收起的状态不中断。
+  TaskDialog.open({ mode: 'new', start: a, end: b });
+  clearSelection();
 });
 
 calwrap.addEventListener('pointerleave', () => {
+  if (App.sel) return;
   if (!App.selectedId) setHover(null);
-  if (App.newMode && !App.sel) markHoverDay(null);
+  markHoverDay(null);
 });
 calwrap.addEventListener('contextmenu', e => { if (App.sel) { e.preventDefault(); clearSelection(); } });
-calwrap.addEventListener('pointercancel', () => { press = null; clearSelection(); });
+for (const type of ['pointercancel', 'lostpointercapture']) {
+  calwrap.addEventListener(type, e => { if (e.pointerId === datePointerId) clearSelection(); });
+}
+window.addEventListener('blur', clearSelection);
 cal.addEventListener('keydown', e => {
   const bar = e.target.closest('.cal-bar');
   if (bar && (e.key === 'Enter' || e.key === ' ')) {
     e.preventDefault();
-    if (!App.newMode) select(bar.dataset.id);
+    if (!App.sel) select(bar.dataset.id);
   }
 });
 cal.addEventListener('click', e => {
-  if (App.newMode) return;
+  if (App.sel || TaskDialog.isOpen() || Settings.isOpen()) return;
   const bar = e.target.closest('.cal-bar');
   if (bar) select(bar.dataset.id);
 });
@@ -465,8 +458,6 @@ $('nextBtn').addEventListener('click', () => shiftMonth(1));
 $('todayBtn').addEventListener('click', goToday);
 $('newBtn').addEventListener('click', newTask);
 $('emptyNewBtn').addEventListener('click', newTask);
-$('rangeBtn').addEventListener('click', enterNewMode);
-$('cancelRangeBtn').addEventListener('click', exitNewMode);
 $('settingsBtn').addEventListener('click', () => Settings.open());
 $('closeBtn').addEventListener('click', () => rc.hideW2());
 
@@ -476,8 +467,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (TaskDialog.isOpen()) return;        // 填写弹窗里按 Esc 不关闭
     if (Settings.isOpen()) Settings.close();
-    else if (App.sel) clearSelection();
-    else if (App.newMode) exitNewMode();
+    else if (App.sel) { e.preventDefault(); clearSelection(); }
     else if (App.selectedId) select(null);
     return;
   }
@@ -496,10 +486,10 @@ document.addEventListener('keydown', e => {
 rc.onCommand(cmd => {
   if (cmd.type === 'new') newTask();
   else if (cmd.type === 'settings') Settings.open();
-  else if (cmd.type === 'discard') { TaskDialog.discard(); if (App.newMode) exitNewMode(); }
+  else if (cmd.type === 'discard') { TaskDialog.discard(); clearSelection(); }
 });
 
 rc.onState(s => { App.state = s; render(); if (Settings.isOpen()) Settings.render(); });
 rc.getState().then(s => { App.state = s; render(); });
 
-window.W2App = { App, toast, report, refreshBlock, render, select, exitNewMode };
+window.W2App = { App, toast, report, refreshBlock, render, select, clearSelection };

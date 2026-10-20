@@ -48,6 +48,8 @@
   --done-fg: #8b98a1;
   --danger: #c0575c;
   --shadow: 0 14px 38px #274d6930;
+  /* 日期与主面板可点击控件共用白色细描边箭头；14.52px，热点对齐尖端。 */
+  --date-cursor: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQuNTIiIGhlaWdodD0iMTQuNTIiIHZpZXdCb3g9Ii01IC01IDE0MCAxNDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxnIGNsaXAtcGF0aD0idXJsKCNjbGlwMF8xNl8yKSI+CjxwYXRoIGQ9Ik0yMy40OTk2IDAuMjIwMDg0QzI5LjczOTYgLTEuOTc5OTIgMzcuMzE5NiAzLjk2MDA5IDUyLjQ1OTYgMTUuODQwMUw4Ny43MTk2IDQzLjU0MDFDMTA1LjAyIDU3LjE0MDEgMTEzLjY4IDYzLjkyMDEgMTEyLjYgNzAuODQwMUMxMTIuNDU0IDcxLjc3MzQgMTEyLjE5OSA3Mi42ODY0IDExMS44NCA3My41NjAxQzExMC41IDc2LjgyMDEgMTA3LjEgNzguNzgwMSAxMDEuMjggODAuMjYwMUM5MS4xMzk2IDgyLjg2MDEgODYuMDc5NiA4NC4xNDAxIDg0LjQxOTYgODcuMzQwMUM4NC4xODY0IDg3Ljc4NjggODMuOTk4OCA4OC4yNTU4IDgzLjg1OTYgODguNzQwMUM4Mi44Mzk2IDkyLjIwMDEgODUuMzU5NiA5Ni4yMDAxIDkwLjM3OTYgMTA0LjE4TDkxLjMzOTYgMTA1LjdDOTIuNTQ5OCAxMDcuNjIxIDkzLjM0MTcgMTA5Ljc3NSA5My42NjM5IDExMi4wMjJDOTMuOTg2MSAxMTQuMjY5IDkzLjgzMTIgMTE2LjU1OCA5My4yMDk1IDExOC43NDFDOTIuNTg3NyAxMjAuOTI1IDkxLjUxMyAxMjIuOTUyIDkwLjA1NTMgMTI0LjY5MkM4OC41OTc2IDEyNi40MzMgODYuNzg5NiAxMjcuODQ2IDg0Ljc0OTIgMTI4Ljg0MUM4Mi43MDg4IDEyOS44MzYgODAuNDgxNyAxMzAuMzg5IDc4LjIxMyAxMzAuNDY2Qzc1Ljk0NDMgMTMwLjU0MyA3My42ODQ5IDEzMC4xNCA3MS41ODIxIDEyOS4yODZDNjkuNDc5MiAxMjguNDMxIDY3LjU4IDEyNy4xNDIgNjYuMDA4MiAxMjUuNTA1QzY0LjQzNjQgMTIzLjg2NyA2My4yMjczIDEyMS45MTYgNjIuNDU5NiAxMTkuNzhMNjEuODU5NiAxMTguMDhDNTguNjM5NiAxMDkuMiA1Ny4wMzk2IDEwNC43OCA1My42Nzk2IDEwMy40NEM1My4yMTQyIDEwMy4yNTkgNTIuNzMxOCAxMDMuMTI1IDUyLjIzOTYgMTAzLjA0QzQ4LjY5OTYgMTAyLjM0IDQ0LjU1OTYgMTA1LjU0IDM2LjI5OTYgMTExLjk2QzMxLjUzOTYgMTE1LjY0IDI3Ljg5OTYgMTE3LjEyIDI0LjQ5OTYgMTE2LjE2QzIzLjU5NDcgMTE1LjkwOSAyMi43MjIxIDExNS41NTMgMjEuODk5NiAxMTUuMUMxNS43NTk2IDExMS42NiAxNS43Mzk2IDEwMC42NiAxNS42OTk2IDc4LjcwMDFMMTUuNTc5NiAzMy44NDAxQzE1LjUzOTYgMTQuNTgwMSAxNS41MTk2IDQuOTQwMDggMjEuMDk5NiAxLjQwMDA4QzIxLjg1MzMgMC45MTg4NDQgMjIuNjU4MyAwLjUyMzA3MSAyMy40OTk2IDAuMjIwMDg0WiIgZmlsbD0iI2ZmZmZmZiIgc3Ryb2tlPSIjNzk5NGEzIiBzdHJva2Utd2lkdGg9IjgiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9nPgo8ZGVmcz4KPGNsaXBQYXRoIGlkPSJjbGlwMF8xNl8yIj4KPHJlY3QgeD0iLTUiIHk9Ii01IiB3aWR0aD0iMTQwIiBoZWlnaHQ9IjE0MCIgZmlsbD0id2hpdGUiLz4KPC9jbGlwUGF0aD4KPC9kZWZzPgo8L3N2Zz4K") 3 1, default;
 }
 
 * { box-sizing: border-box; }
@@ -63,6 +65,7 @@ body {
 /* 根页面保持透明，所有有底色的内容在同一个圆角面板内裁切。 */
 .app-shell {
   --corner: 16px;
+  position: relative;
   display: flex;
   flex-direction: column;
   max-height: var(--available-height, 1000px);
@@ -73,10 +76,11 @@ body {
   clip-path: inset(0 round var(--corner));
   background: var(--bg);
 }
-.app-shell.editing { min-height: min(640px, var(--available-height, 1000px)); }
+.app-shell.editing { min-height: min(var(--dialog-height, 420px), var(--available-height, 1000px)); }
+.app-shell.settings-open { min-height: min(640px, var(--available-height, 1000px)); }
 
 button, input, textarea { font: inherit; }
-button { color: inherit; cursor: pointer; transition: background-color .15s, color .15s, transform .15s; }
+button { color: inherit; cursor: var(--date-cursor); transition: background-color .15s, color .15s, transform .15s; }
 button:disabled { opacity: .5; cursor: wait; }
 button:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid #5f93b6; outline-offset: 2px; }
 button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
@@ -145,7 +149,7 @@ button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke
   border-radius: 12px;
   background: #fff5ec;
   text-align: left;
-  cursor: pointer;
+  cursor: var(--date-cursor);
   opacity: 0;
   pointer-events: none;
   transform-origin: top center;
@@ -166,16 +170,14 @@ button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke
 .rm-ok { min-height: 26px; padding: 0 11px; border: 1px solid #efdcc8; border-radius: 8px; background: #fff; color: #a0603f; font-size: 12px; font-weight: 600; line-height: 24px; }
 .rm-ok:hover { background: #fff0e2; }
 
-.newbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex: 0 0 auto; padding: 7px 10px; margin-bottom: 9px; border-radius: 9px; background: #eaf5fb; color: #527fa0; font-size: 10px; }
-.newbar button { border: 0; background: none; color: #527fa0; white-space: nowrap; }
 .calwrap { flex: 0 0 auto; min-height: 0; position: relative; padding: 10px 0 8px; }
 #cal { display: flex; flex-direction: column; }
 .cal-wd { flex: 0 0 auto; height: 22px; margin-bottom: 8px; padding: 0; align-items: start; color: #9db0bc; font-size: 11px; font-weight: 600; letter-spacing: 2px; text-indent: 2px; text-align: center; }
 .cal-wd span { padding: 0; }
 .cal-wd span:nth-child(n+6) { color: var(--weekend); }
 /* 基础周行随宽度缩放；日程增多时由内容撑高，不截断连续日程条。 */
-.cal-week { position: relative; flex: 0 0 auto; min-height: var(--week-height, 58px); margin: 0; padding: 3px 0 8px; border-top: 1px solid #eaf0f3; }
-.cal-dates { height: 28px; align-items: center; color: #31597a; font: 17px/1 Bahnschrift, "Segoe UI", "Microsoft YaHei UI", sans-serif; font-variant-numeric: tabular-nums; }
+.cal-week { position: relative; flex: 0 0 auto; min-height: var(--week-height, 58px); margin: 0; padding: 3px 0 8px; border-top: 1px solid #eaf0f3; cursor: var(--date-cursor); touch-action: none; }
+.cal-dates { position: relative; z-index: 1; height: 28px; align-items: center; color: #31597a; font: 17px/1 Bahnschrift, "Segoe UI", "Microsoft YaHei UI", sans-serif; font-variant-numeric: tabular-nums; }
 .cal-dc { height: 28px; display: flex; align-items: center; justify-content: center; padding: 0; }
 .cal-dc:nth-child(n+6) { color: var(--weekend); font-weight: 500; }
 .cal-dc.out { color: #c3cfd6; }
@@ -184,13 +186,13 @@ button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke
 .cal-dc.today .date-number { background: var(--today-bg); color: var(--today); font-weight: 600; }
 .cal-lanes { margin-top: 6px; }
 .cal-lanes:empty { margin-top: 0; }
-.calwrap .cal-bar { cursor: pointer; font-weight: 400; letter-spacing: 0; transition: transform .15s ease, filter .15s ease, box-shadow .15s ease; }
+.calwrap .cal-bar { cursor: var(--date-cursor); font-weight: 400; letter-spacing: 0; transition: transform .15s ease, filter .15s ease, box-shadow .15s ease; }
 .calwrap .cal-bar.hot, .calwrap .cal-bar.sel { filter: brightness(.98) saturate(1.08); transform: translateY(-1px); box-shadow: none; z-index: 2; }
 .cal-bar.is-pinned::before { content: ""; display: inline-block; width: 4px; height: 4px; margin: -1px 5px 0 0; border-radius: 50%; background: currentColor; vertical-align: middle; opacity: .8; }
-.calwrap.newmode { cursor: crosshair; }
-.calwrap.newmode .cal-bar { cursor: crosshair; }
+/* 拖选越过日程条或移出日历时仍保持同一光标，由系统直接跟随鼠标。 */
+body:has(.calwrap.selecting), body:has(.calwrap.selecting) * { cursor: var(--date-cursor) !important; }
 .cal-dc.hov .date-number { background: #e8f3fb; color: #447da5; }
-.cal-preview { position: absolute; height: 15px; border-radius: 999px; background: #91c7e8; opacity: .65; pointer-events: none; z-index: 3; }
+.cal-preview { position: absolute; border-radius: 8px; background: #d9edf9; opacity: .8; pointer-events: none; z-index: 0; }
 .empty { margin: 14px 0 8px; text-align: center; font-size: 11px; color: var(--fg3); }
 .empty button { padding: 0 4px; border: 0; background: none; color: #a0603f; }
 
@@ -201,16 +203,13 @@ button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke
 .month-step:hover { background: rgba(255, 255, 255, .8); color: #3f7598; }
 .month-step svg { width: 15px; height: 15px; stroke-width: 1.8; }
 .month-label { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: #3f7598; font-size: 14px; font-weight: 600; letter-spacing: .3px; }
-.today-button, .new-button, .range-entry { height: 40px; flex: 0 0 auto; border: 0; border-radius: 999px; font-size: 12px; }
+.today-button, .new-button { height: 40px; flex: 0 0 auto; border: 0; border-radius: 999px; font-size: 12px; }
 .today-button { padding: 0 15px; background: #f1f5f7; color: #5e7e92; }
 .today-button:hover { background: #e7eef2; }
 .new-button { padding: 0 15px; background: #fff4e9; color: #a0603f; font-weight: 600; }
 .new-button:hover { background: #ffecda; }
 .new-button span { margin-right: 5px; font-size: 14px; font-weight: 400; }
-.range-entry { width: 34px; padding: 0; display: grid; place-items: center; background: #f1f5f7; color: #7894a6; }
-.range-entry:hover { background: #e7eef2; color: #557e98; }
-.range-entry svg { width: 15px; height: 15px; }
-.today-button:active, .new-button:active, .range-entry:active { transform: translateY(1px); }
+.today-button:active, .new-button:active { transform: translateY(1px); }
 
 /* 详情从窗口最下方展开；悬停预览，点选后才显示操作按钮。 */
 .detail-section { position: relative; flex: 0 0 auto; height: 0; margin: 0 16px; overflow: hidden; opacity: 0; transition: height .24s cubic-bezier(.22, 1, .36, 1), margin-top .24s cubic-bezier(.22, 1, .36, 1), opacity .16s ease; }
@@ -235,9 +234,51 @@ button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke
 .toast.bad { background: var(--danger); }
 
 /* 填写弹窗 */
-.overlay { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 16px; background: #39576d32; }
-.dialog { width: 100%; max-width: 440px; max-height: 100%; overflow-y: auto; padding: 20px; border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); user-select: text; }
-.dialog h3 { margin: 0 0 14px; font-size: 16px; font-weight: 500; }
+.overlay { position: absolute; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 12px; background: #39576d32; }
+.dialog { display: flex; flex-direction: column; width: 100%; max-width: 440px; max-height: 100%; overflow: hidden; border: 1px solid var(--rule); border-radius: 16px; background: var(--surface); box-shadow: 0 10px 32px #274d6924; user-select: text; }
+.dialog-header { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px 12px; }
+.dialog h3 { flex: 0 0 auto; margin: 0; font-size: 16px; font-weight: 600; }
+.dialog-scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.dialog-fields { display: grid; gap: 12px; padding: 0 15px 16px 20px; }
+.dialog .field { margin: 0; }
+.dialog .field > label { margin-bottom: 5px; font-size: 11px; }
+.dialog .optional { margin-left: 5px; color: var(--fg3); font-size: 10px; font-weight: 400; }
+.dialog .field input[type=text], .dialog .field input[type=date], .dialog .field textarea { padding: 8px 10px; border-color: #e5edf2; border-radius: 9px; background: #f7fafc; }
+.dialog .field #dlgTitle { height: 38px; background: #fff; font-size: 14px; }
+.dialog .field textarea { display: block; height: 58px; min-height: 58px; max-height: 140px; resize: vertical; line-height: 1.6; }
+.dialog input::placeholder, .dialog textarea::placeholder { color: #a0b1bd; }
+.dialog .row2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.dialog-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; user-select: none; }
+.editor-tool, .pin-tool { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 30px; padding: 4px 10px; border: 1px solid transparent; border-radius: 8px; background: #f1f6f9; color: #607e93; font-size: 11px; cursor: var(--date-cursor); }
+.editor-tool:hover, .pin-tool:hover { background: #e9f1f6; }
+.editor-tool[aria-expanded=true] { border-color: #d3e3ef; background: #eaf3f9; color: #456d8b; }
+.editor-tool svg { width: 13px; height: 13px; }
+.editor-tool .tool-chevron { width: 11px; height: 11px; transition: transform .16s ease; }
+.editor-tool[aria-expanded=true] .tool-chevron { transform: rotate(180deg); }
+.color-dot { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1px #31587312; }
+.pin-tool { margin-left: auto; }
+.pin-tool input { margin: 0; width: 12px; height: 12px; }
+.pin-tool:has(input:checked) { background: #e9f4ef; color: #4e8875; }
+.editor-drawer { min-width: 0; padding: 12px; border-radius: 10px; background: #f7fafc; animation: drawer-in .16s ease-out; }
+.editor-drawer .swatches { gap: 9px; padding: 3px; }
+.editor-drawer .swatch { width: 23px; height: 23px; }
+.editor-drawer .custom-color { margin-top: 10px; }
+.editor-drawer .custom-color label { margin-right: auto; font-size: 11px; color: var(--fg2); }
+.remind-mode { display: flex; gap: 16px; }
+.remind-mode .check { margin: 0; font-size: 11px; }
+.remind-summary { margin: 9px 0 0; color: var(--fg2); font-size: 11px; line-height: 1.6; }
+.dialog .remind-grid { margin-top: 10px; padding: 0; gap: 5px 8px; }
+.dialog .remind-grid .check { gap: 4px; margin: 0; font-size: 11px; }
+.dialog .remind-grid input[type=number] { width: 40px; }
+.dialog .err { margin-top: 5px; font-size: 11px; }
+.dialog #errDate { margin: -6px 0 0; }
+.dialog-footer { flex: 0 0 auto; padding: 12px 20px; border-top: 1px solid var(--rule); background: #fff; }
+.dialog-footer .actions { margin: 0; }
+.dialog-footer .err { margin: 0 0 8px; }
+.dialog-footer .primary { min-width: 76px; background: #608ba6; border-radius: 8px; }
+.dialog-footer .primary:hover { background: #4d7893; }
+.dialog-footer .plain-btn { border-color: transparent; background: #f1f5f7; color: var(--fg2); border-radius: 8px; }
+@keyframes drawer-in { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
 .field { margin-bottom: 12px; }
 .field > label, .field-label { display: block; margin-bottom: 4px; font-size: 12px; color: var(--fg2); }
 .field input[type=text], .field input[type=date], .field input[type=number], .field textarea { width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid var(--rule2); border-radius: 6px; background: var(--field); color: var(--fg); font: inherit; }
@@ -245,7 +286,7 @@ button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke
 .row2 { display: flex; gap: 10px; }
 .row2 > .field { flex: 1; min-width: 0; }
 .err { margin-top: 4px; font-size: 12px; color: var(--danger); }
-.preview-bar { height: 22px; line-height: 22px; padding: 0 6px; margin-bottom: 14px; border-radius: 999px; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.preview-bar { width: 144px; min-width: 0; height: 22px; line-height: 22px; padding: 0 9px; border-radius: 7px; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .swatches { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .swatch { width: 22px; height: 22px; border: 0; border-radius: 50%; padding: 0; box-shadow: none; }
 .swatch.on { box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--hl); }
@@ -253,7 +294,7 @@ button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke
 .custom-color { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
 .custom-color input[type=color] { width: 30px; height: 26px; padding: 0; border: 1px solid var(--rule2); border-radius: 5px; background: none; }
 .custom-color input[type=text] { width: 96px; padding: 4px 6px; border: 1px solid var(--rule2); border-radius: 5px; background: var(--field); color: var(--fg); font: inherit; }
-.check { display: flex; align-items: center; gap: 6px; margin: 4px 0; font-size: 12px; cursor: pointer; }
+.check { display: flex; align-items: center; gap: 6px; margin: 4px 0; font-size: 12px; cursor: var(--date-cursor); }
 input[type=checkbox], input[type=radio], input[type=range] { accent-color: #668eac; }
 .remind-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; margin-top: 6px; padding-left: 22px; }
 .remind-grid input[type=number] { width: 48px; padding: 2px 4px; border: 1px solid var(--rule2); border-radius: 4px; background: var(--field); color: var(--fg); font: inherit; }
@@ -261,7 +302,6 @@ input[type=checkbox], input[type=radio], input[type=range] { accent-color: #668e
 .hint { font-size: 12px; color: var(--fg3); }
 .actions { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
 .actions .spacer { flex: 1; }
-.dialog .actions { position: sticky; bottom: -20px; z-index: 3; margin: 16px -20px -20px; padding: 12px 20px; background: #fff; border-top: 1px solid var(--rule); }
 .plain-btn, .danger-btn { min-height: 31px; padding: 4px 13px; border: 1px solid var(--rule2); border-radius: 6px; background: #fff; }
 .plain-btn:hover, .danger-btn:hover { background: var(--hover); }
 .danger-btn { color: var(--danger); }
@@ -278,6 +318,7 @@ input[type=checkbox], input[type=radio], input[type=range] { accent-color: #668e
 .srow { display: grid; grid-template-columns: 96px 1fr 64px; align-items: center; gap: 10px; min-height: 36px; }
 .srow input[type=range] { width: 100%; accent-color: var(--accent); }
 .srow input[type=color] { width: 40px; height: 26px; padding: 0; border: 1px solid var(--rule2); border-radius: 5px; background: none; }
+.srow select { width: 100%; min-height: 28px; padding: 3px 8px; border: 1px solid var(--rule2); border-radius: 6px; background: var(--surface); color: var(--fg); font: inherit; }
 .srow output { text-align: right; font-variant-numeric: tabular-nums; color: var(--fg2); }
 .warn { margin: 4px 0 0 106px; font-size: 12px; color: var(--danger); }
 .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
@@ -293,7 +334,6 @@ input[type=checkbox], input[type=radio], input[type=range] { accent-color: #668e
   .bottom-bar, .detail-section { margin-left: 14px; margin-right: 14px; }
   .today-button, .new-button { padding: 0 10px; }
   .month-pill { padding: 0 2px; }
-  .range-entry { width: 32px; }
   .row2 { gap: 6px; }
   .remind-grid { padding-left: 0; gap: 2px 4px; }
 }
@@ -321,7 +361,6 @@ input[type=checkbox], input[type=radio], input[type=range] { accent-color: #668e
         <div class="reminder-head"><b id="reminderHead"></b></div>
         <div class="reminders" id="reminders" hidden></div>
       </section>
-      <div class="newbar" id="newbar" hidden><span>在日历上拖选日期，松开后填写日程</span><button id="cancelRangeBtn" type="button">取消</button></div>
       <div class="calwrap" id="calwrap">
         <div id="cal"></div>
         <div class="empty" id="empty" hidden>这个月还是空白的。<button id="emptyNewBtn" type="button">记下第一件事</button></div>
@@ -336,7 +375,6 @@ input[type=checkbox], input[type=radio], input[type=range] { accent-color: #668e
       </div>
       <button class="today-button" id="todayBtn" type="button">回到今天</button>
       <button class="new-button" id="newBtn" type="button" title="新建日程（Ctrl+N）"><span aria-hidden="true">＋</span>新建日程</button>
-      <button class="range-entry" id="rangeBtn" type="button" title="拖选一段日期新建日程" aria-label="拖选日期"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4m8-4v4M4 10h16m-12 4h3m2 3h3"/></svg></button>
     </section>
 
     <section class="detail-section" id="detailSection" aria-label="日程详情" aria-hidden="true">
@@ -461,6 +499,59 @@ input[type=checkbox], input[type=radio], input[type=range] { accent-color: #668e
   return { hexRgb, lum, contrast, isHex, rgba, barText, textTokens, panelContrast, PRESETS };
 });
 </script>
+<script>// 桌面挂件的默认外观与取值范围，主进程、挂件和设置页共用。
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.RCDesktopAppearance = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  const VERSION = 2;
+  const DEFAULT = Object.freeze({
+    panelColor: '#FFFFFF', panelOpacity: 14, blur: 14, textColor: '#315873',
+    width: 420, dateFontSize: 17, barFontSize: 10, barHeight: 15,
+  });
+  const LIMITS = Object.freeze({
+    panelOpacity: [0, 100, 1], width: [320, 600, 10], dateFontSize: [13, 22, 1],
+    blur: [0, 40, 1], barFontSize: [7, 12, 0.5], barHeight: [6, 18, 1],
+  });
+  const GLASS_LEVELS = Object.freeze([
+    { value: 0, label: '关闭' }, { value: 14, label: '轻磨砂' }, { value: 40, label: '柔雾' },
+  ]);
+  // 保留旧文件中的 blur 值，按范围映射原生效果；系统接口不提供像素半径。
+  const glassLevel = value => Number(value) <= 0 ? 0 : Number(value) <= 20 ? 14 : 40;
+
+  function normalize(value) {
+    const saved = value && typeof value === 'object' ? value : {};
+    const result = { ...DEFAULT };
+    for (const key of ['panelColor', 'textColor']) {
+      if (typeof saved[key] === 'string' && /^#[0-9a-f]{6}$/i.test(saved[key])) result[key] = saved[key].toUpperCase();
+    }
+    for (const [key, [min, max, step]] of Object.entries(LIMITS)) {
+      const n = saved[key] == null ? NaN : Number(saved[key]);
+      if (Number.isFinite(n)) result[key] = Math.max(min, Math.min(max, Math.round(n / step) * step));
+    }
+    return result;
+  }
+
+  // 旧版未改过的黑底白字换成选定的玻璃配色；已经自定义的配色和尺寸继续保留。
+  function migrate(value, version) {
+    const saved = value && typeof value === 'object' ? { ...value } : {};
+    if (!(version >= VERSION)) {
+      const originalColors = String(saved.panelColor || '#000000').toUpperCase() === '#000000'
+        && String(saved.textColor || '#FFFFFF').toUpperCase() === '#FFFFFF'
+        && (saved.panelOpacity == null || Number(saved.panelOpacity) === 28);
+      if (originalColors) {
+        saved.panelColor = DEFAULT.panelColor;
+        saved.textColor = DEFAULT.textColor;
+        saved.panelOpacity = DEFAULT.panelOpacity;
+      }
+      if (Number(saved.barHeight) === 12) saved.barHeight = DEFAULT.barHeight;
+    }
+    return normalize(saved);
+  }
+
+  return { VERSION, DEFAULT, LIMITS, GLASS_LEVELS, glassLevel, normalize, migrate };
+});
+</script>
 <script>// 整月日历 + 甘特条：W1、W2 共用的排版和渲染
 (function (root) {
   const D = root.RCDates, C = root.RCColors;
@@ -580,7 +671,7 @@ input[type=checkbox], input[type=radio], input[type=range] { accent-color: #668e
     ['假期准备', 28, 33, '#F2BEAE', '确认行程，收拾行李。'],
   ];
   let state = {
-    today, settings, w1: { pinned: false, embedded: false, degraded: false, wallAvg: [180, 194, 208] },
+    today, settings, w1: { pinned: false, embedded: false, degraded: false, glass: { mode: 'none', available: false } },
     tasks: rows.map(([title, a, b, color, note, pinned, done], i) => ({
       id: `preview-${i}`, title, startDate: day(a), endDate: day(b), color, note,
       pinned: !!pinned, done: !!done, remind: null, createdAt: new Date(2026, 0, 1, 0, i).toISOString(), updatedAt: new Date().toISOString(),
@@ -631,13 +722,14 @@ input[type=checkbox], input[type=radio], input[type=range] { accent-color: #668e
     resetW1: async () => ok(),
     setAutoStart: async on => { state.settings.general.autoStart = on; push(); return ok(); },
   };
-})({"version":1,"w1":{"pinned":false,"x":null,"y":null,"appearance":{"panelColor":"#000000","panelOpacity":28,"blur":14,"textColor":"#FFFFFF","barFontSize":10,"barHeight":12,"width":420}},"w2":{"dock":null,"x":null,"y":null,"width":480,"height":720,"theme":"light"},"reminder":{"startBefore":{"on":true,"days":1},"startDay":true,"endBefore":{"on":false,"days":1},"endDay":true},"general":{"autoStart":false,"onboardingDone":false},"recentColors":[],"lastColor":null});</script><script>// 主界面：便当盒布局。提醒在月历上方，月份操作在下方，详情从窗口底部展开。
+})({"version":1,"w1":{"pinned":false,"x":null,"y":null,"appearanceVersion":2,"appearance":{"panelColor":"#FFFFFF","panelOpacity":14,"blur":14,"textColor":"#315873","width":420,"dateFontSize":17,"barFontSize":10,"barHeight":15}},"w2":{"dock":null,"x":null,"y":null,"width":480,"height":720,"theme":"light"},"reminder":{"startBefore":{"on":true,"days":1},"startDay":true,"endBefore":{"on":false,"days":1},"endDay":true},"general":{"autoStart":false,"onboardingDone":false},"recentColors":[],"lastColor":null});</script><script>// 主界面：便当盒布局。提醒在月历上方，月份操作在下方，详情从窗口底部展开。
 const D = RCDates, C = RCColors, K = RCCal;
 const $ = id => document.getElementById(id);
 const BAR_H = 15, FONT = 10;
 
-const App = { state: null, view: null, hoverId: null, selectedId: null, newMode: false, sel: null };
+const App = { state: null, view: null, hoverId: null, selectedId: null, sel: null };
 const cal = $('cal'), calwrap = $('calwrap');
+let datePointerId = null;
 let reminderIndex = 0, remindersExpanded = false;
 let reminderAnimations = [];
 let shownDetailId = null;
@@ -661,12 +753,16 @@ function measureDetail() {
 new ResizeObserver(reportHeight).observe(shell);
 new ResizeObserver(measureDetail).observe($('detail'));
 // 与 HTML 方案使用同一宽高规则；只在宽度变化时更新，避免高度动画反复触发布局。
-let calendarWidth = 0;
+let calendarWidth = 0, calendarSizeFrame = 0;
 new ResizeObserver(() => {
-  const width = cal.clientWidth;
-  if (width === calendarWidth) return;
-  calendarWidth = width;
-  cal.style.setProperty('--week-height', `${Math.max(56, Math.round(width * .135))}px`);
+  if (calendarSizeFrame) return;
+  calendarSizeFrame = requestAnimationFrame(() => {
+    calendarSizeFrame = 0;
+    const width = cal.clientWidth;
+    if (width === calendarWidth) return;
+    calendarWidth = width;
+    cal.style.setProperty('--week-height', `${Math.max(56, Math.round(width * .135))}px`);
+  });
 }).observe(cal);
 rc.onW2Layout(({ maxHeight }) => {
   availableHeight = maxHeight;
@@ -692,12 +788,13 @@ function report(res, okMsg) {
   else toast('保存失败，已恢复原来的状态', true);
 }
 
-// 新建中 / 有弹窗 / 在设置页 / 输入框有焦点时，告诉主进程别自动收起
+// 拖选中 / 有弹窗 / 在设置页 / 输入框有焦点时，告诉主进程别自动收起
 function refreshBlock() {
   const el = document.activeElement;
   const typing = !!el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
-  rc.setBlock(App.newMode || TaskDialog.isOpen() || Settings.isOpen() || typing);
+  rc.setBlock(!!App.sel || TaskDialog.isOpen() || Settings.isOpen() || typing);
   shell.classList.toggle('editing', (TaskDialog.isOpen() && !TaskDialog.confirmOpen()) || Settings.isOpen());
+  shell.classList.toggle('settings-open', Settings.isOpen());
 }
 document.addEventListener('focusin', refreshBlock);
 document.addEventListener('focusout', () => setTimeout(refreshBlock, 0));
@@ -955,37 +1052,18 @@ function goToday() {
 function newTask() {
   if (TaskDialog.isOpen() || !App.state) return;
   Settings.close();
-  exitNewMode();
+  clearSelection();
   select(null);
   const today = D.parse(App.state.today), { y, m } = App.view;
   const day = y === today.getFullYear() && m === today.getMonth() ? App.state.today : D.toStr(new Date(y, m, 1));
   TaskDialog.open({ mode: 'new', start: day, end: day });
 }
 
-// 选日期：保留跨天拖选能力，作为新建的另一种入口。
-function enterNewMode() {
-  if (TaskDialog.isOpen()) return;
-  Settings.close();
-  App.newMode = true;
-  select(null);
-  calwrap.classList.add('newmode');
-  $('newbar').hidden = false;
-  refreshBlock();
-}
-
-function exitNewMode() {
-  App.newMode = false;
-  clearSelection();
-  markHoverDay(null);
-  calwrap.classList.remove('newmode');
-  $('newbar').hidden = true;
-  refreshBlock();
-}
-
+// 日历本身即可选日期；已有日程条保留查看详情的点击行为。
 function dayAt(x, y) {
   const el = document.elementFromPoint(x, y);
   const week = el && el.closest('.cal-week');
-  if (!week) return null;
+  if (!week || !cal.contains(week)) return null;
   const r = week.getBoundingClientRect();
   const col = Math.max(0, Math.min(6, Math.floor((x - r.left) / (r.width / 7))));
   return D.addDays(week.dataset.start, col);
@@ -1008,7 +1086,8 @@ function drawPreview(e) {
     const i = Math.max(0, D.diff(ws, a)), j = Math.min(6, D.diff(ws, b));
     const div = document.createElement('div');
     div.className = 'cal-preview';
-    div.style.cssText = `left:calc(${i * 100 / 7}% + 2px);width:calc(${(j - i + 1) * 100 / 7}% - 4px);top:${week.querySelector('.cal-lanes').offsetTop}px`;
+    const dates = week.querySelector('.cal-dates');
+    div.style.cssText = `left:calc(${i * 100 / 7}% + 2px);width:calc(${(j - i + 1) * 100 / 7}% - 4px);top:${dates.offsetTop}px;height:${dates.offsetHeight}px`;
     week.appendChild(div);
   });
   const label = $('daylabel');
@@ -1019,69 +1098,74 @@ function drawPreview(e) {
 
 function clearSelection() {
   App.sel = null;
+  const pointerId = datePointerId;
+  datePointerId = null;
+  if (pointerId !== null && calwrap.hasPointerCapture(pointerId)) calwrap.releasePointerCapture(pointerId);
+  calwrap.classList.remove('selecting');
+  markHoverDay(null);
   cal.querySelectorAll('.cal-preview').forEach(n => n.remove());
   $('daylabel').hidden = true;
+  refreshBlock();
 }
 
-let press = null;
 calwrap.addEventListener('pointerdown', e => {
-  if (e.button === 2 && App.sel) { clearSelection(); return; }   // 拖选中点右键：取消这次拖选
-  if (e.button !== 0) return;
-  if (App.newMode) {
-    const day = dayAt(e.clientX, e.clientY);
-    if (!day) return;
-    App.sel = { a: day, b: day };
-    calwrap.setPointerCapture(e.pointerId);
-    drawPreview(e);
-    return;
-  }
-  const bar = e.target.closest('.cal-bar');
-  press = { x: e.clientX, y: e.clientY, id: bar ? bar.dataset.id : null };
+  if (e.button !== 0 || !e.isPrimary || datePointerId !== null || !App.state
+    || TaskDialog.isOpen() || Settings.isOpen() || e.target.closest('.cal-bar')) return;
+  const day = dayAt(e.clientX, e.clientY);
+  if (!day) return;
+  e.preventDefault();
+  datePointerId = e.pointerId;
+  App.sel = { a: day, b: day };
+  calwrap.setPointerCapture(e.pointerId);
+  select(null);
+  markHoverDay(null);
+  calwrap.classList.add('selecting');
+  refreshBlock();
+  drawPreview(e);
 });
 
 calwrap.addEventListener('pointermove', e => {
-  if (App.newMode) {
+  if (App.sel && e.pointerId === datePointerId) {
     const day = dayAt(e.clientX, e.clientY);
-    markHoverDay(day);
-    if (App.sel) { if (day) App.sel.b = day; drawPreview(e); }   // 拖出日历区域：保留最后经过的那一天
+    if (day) App.sel.b = day;   // 拖出日历区域：保留最后经过的那一天
+    drawPreview(e);
     return;
   }
-  if (press && (e.buttons & 1)) {
-    if (Math.abs(e.clientX - press.x) + Math.abs(e.clientY - press.y) > 4) press = null;
-    return;
-  }
-  if (!App.selectedId) { const bar = e.target.closest('.cal-bar'); setHover(bar ? bar.dataset.id : null); }
+  if (e.buttons || TaskDialog.isOpen() || Settings.isOpen()) return;
+  const bar = e.target.closest('.cal-bar');
+  markHoverDay(bar ? null : dayAt(e.clientX, e.clientY));
+  if (!App.selectedId) setHover(bar ? bar.dataset.id : null);
 });
 
-calwrap.addEventListener('pointerup', () => {
-  if (App.newMode) {
-    if (!App.sel) return;
-    const [a, b] = ordered();
-    clearSelection();
-    TaskDialog.open({ mode: 'new', start: a, end: b });
-    return;
-  }
-  if (!press) return;
-  const id = press.id;
-  press = null;
-  select(id);   // 点条选中；点空白取消选中
+calwrap.addEventListener('pointerup', e => {
+  if (e.button !== 0 || e.pointerId !== datePointerId || !App.sel) return;
+  const day = dayAt(e.clientX, e.clientY);
+  if (day) App.sel.b = day;
+  const [a, b] = ordered();
+  // 先打开弹窗再结束拖选，使阻止自动收起的状态不中断。
+  TaskDialog.open({ mode: 'new', start: a, end: b });
+  clearSelection();
 });
 
 calwrap.addEventListener('pointerleave', () => {
+  if (App.sel) return;
   if (!App.selectedId) setHover(null);
-  if (App.newMode && !App.sel) markHoverDay(null);
+  markHoverDay(null);
 });
 calwrap.addEventListener('contextmenu', e => { if (App.sel) { e.preventDefault(); clearSelection(); } });
-calwrap.addEventListener('pointercancel', () => { press = null; clearSelection(); });
+for (const type of ['pointercancel', 'lostpointercapture']) {
+  calwrap.addEventListener(type, e => { if (e.pointerId === datePointerId) clearSelection(); });
+}
+window.addEventListener('blur', clearSelection);
 cal.addEventListener('keydown', e => {
   const bar = e.target.closest('.cal-bar');
   if (bar && (e.key === 'Enter' || e.key === ' ')) {
     e.preventDefault();
-    if (!App.newMode) select(bar.dataset.id);
+    if (!App.sel) select(bar.dataset.id);
   }
 });
 cal.addEventListener('click', e => {
-  if (App.newMode) return;
+  if (App.sel || TaskDialog.isOpen() || Settings.isOpen()) return;
   const bar = e.target.closest('.cal-bar');
   if (bar) select(bar.dataset.id);
 });
@@ -1098,8 +1182,6 @@ $('nextBtn').addEventListener('click', () => shiftMonth(1));
 $('todayBtn').addEventListener('click', goToday);
 $('newBtn').addEventListener('click', newTask);
 $('emptyNewBtn').addEventListener('click', newTask);
-$('rangeBtn').addEventListener('click', enterNewMode);
-$('cancelRangeBtn').addEventListener('click', exitNewMode);
 $('settingsBtn').addEventListener('click', () => Settings.open());
 $('closeBtn').addEventListener('click', () => rc.hideW2());
 
@@ -1109,8 +1191,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (TaskDialog.isOpen()) return;        // 填写弹窗里按 Esc 不关闭
     if (Settings.isOpen()) Settings.close();
-    else if (App.sel) clearSelection();
-    else if (App.newMode) exitNewMode();
+    else if (App.sel) { e.preventDefault(); clearSelection(); }
     else if (App.selectedId) select(null);
     return;
   }
@@ -1129,13 +1210,13 @@ document.addEventListener('keydown', e => {
 rc.onCommand(cmd => {
   if (cmd.type === 'new') newTask();
   else if (cmd.type === 'settings') Settings.open();
-  else if (cmd.type === 'discard') { TaskDialog.discard(); if (App.newMode) exitNewMode(); }
+  else if (cmd.type === 'discard') { TaskDialog.discard(); clearSelection(); }
 });
 
 rc.onState(s => { App.state = s; render(); if (Settings.isOpen()) Settings.render(); });
 rc.getState().then(s => { App.state = s; render(); });
 
-window.W2App = { App, toast, report, refreshBlock, render, select, exitNewMode };
+window.W2App = { App, toast, report, refreshBlock, render, select, clearSelection };
 </script>
 <script>// 新建 / 编辑日程的填写弹窗 + 删除确认框
 // 填写弹窗只能用鼠标点「保存」「取消」：按 Enter 不保存（备注里 Enter 是换行），按 Esc 不关闭
@@ -1144,6 +1225,8 @@ const TaskDialog = (() => {
   const q = id => document.getElementById(id);
   let ctx = null;          // { mode: 'new' | 'edit', taskId, color }
   let confirmCtx = null;   // { id }
+  let layoutObserver = null;
+  let layoutFrame = 0;
 
   const state = () => W2App.App.state;
 
@@ -1157,6 +1240,7 @@ const TaskDialog = (() => {
   }
 
   function open({ mode, task, start, end }) {
+    layoutObserver?.disconnect();
     const st = state();
     const t = task || {
       title: '', startDate: start, endDate: end, note: '', pinned: false, remind: null,
@@ -1164,63 +1248,129 @@ const TaskDialog = (() => {
     };
     ctx = { mode, taskId: task ? task.id : null, color: t.color.toUpperCase() };
     const g = st.settings.reminder, r = t.remind || g;
+    const chevron = '<svg class="tool-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>';
     modal.innerHTML = `
       <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlgHead">
-        <h3 id="dlgHead">${mode === 'new' ? '新建日程' : '编辑日程'}</h3>
-        <div class="preview-bar" id="dlgPreview"></div>
-        <div class="field"><label for="dlgTitle">标题</label>
-          <input type="text" id="dlgTitle" maxlength="50" value="${K.esc(t.title)}">
-          <div class="err" id="errTitle" hidden></div></div>
-        <div class="row2">
-          <div class="field"><label for="dlgStart">开始日期</label><input type="date" id="dlgStart" value="${t.startDate}"></div>
-          <div class="field"><label for="dlgEnd">结束日期</label><input type="date" id="dlgEnd" value="${t.endDate}"></div>
+        <div class="dialog-header">
+          <h3 id="dlgHead">${mode === 'new' ? '新建日程' : '编辑日程'}</h3>
+          <div class="preview-bar" id="dlgPreview" aria-label="日程条预览"></div>
         </div>
-        <div class="err" id="errDate" hidden style="margin:-6px 0 10px"></div>
-        <div class="field"><span class="field-label">颜色</span>
-          <div class="swatches" id="dlgPresets"></div>
-          <div id="dlgRecentWrap"><div class="sw-sub">最近使用</div><div class="swatches" id="dlgRecent"></div></div>
-          <div class="custom-color"><input type="color" id="dlgPicker" title="取色器"><input type="text" id="dlgHex" maxlength="7" spellcheck="false"></div>
-        </div>
-        <div class="field"><label for="dlgNote">备注</label><textarea id="dlgNote" maxlength="500">${K.esc(t.note)}</textarea></div>
-        <label class="check"><input type="checkbox" id="dlgPinned" ${t.pinned ? 'checked' : ''}> 置顶（排在其他日程前面）</label>
-        <div class="field" style="margin-top:10px"><span class="field-label">提醒</span>
-          <label class="check"><input type="radio" name="dlgRemind" value="global" ${t.remind ? '' : 'checked'}> 沿用统一设置（${remindSummary(g)}）</label>
-          <label class="check"><input type="radio" name="dlgRemind" value="custom" ${t.remind ? 'checked' : ''}> 这条日程单独设置</label>
-          <div class="remind-grid${t.remind ? '' : ' off'}" id="dlgRemindGrid">
-            <label class="check"><input type="checkbox" id="rSB" ${r.startBefore.on ? 'checked' : ''}> 开始前 <input type="number" id="rSBd" min="1" max="365" value="${r.startBefore.days}"> 天</label>
-            <label class="check"><input type="checkbox" id="rSD" ${r.startDay ? 'checked' : ''}> 开始当天</label>
-            <label class="check"><input type="checkbox" id="rEB" ${r.endBefore.on ? 'checked' : ''}> 结束前 <input type="number" id="rEBd" min="1" max="365" value="${r.endBefore.days}"> 天</label>
-            <label class="check"><input type="checkbox" id="rED" ${r.endDay ? 'checked' : ''}> 结束当天</label>
+        <div class="dialog-scroll">
+          <div class="dialog-fields">
+            <div class="field"><label for="dlgTitle">标题</label>
+              <input type="text" id="dlgTitle" maxlength="50" placeholder="日程名称" autocomplete="off" value="${K.esc(t.title)}">
+              <div class="err" id="errTitle" role="alert" hidden></div></div>
+            <div class="row2">
+              <div class="field"><label for="dlgStart">开始日期</label><input type="date" id="dlgStart" value="${t.startDate}"></div>
+              <div class="field"><label for="dlgEnd">结束日期</label><input type="date" id="dlgEnd" value="${t.endDate}"></div>
+            </div>
+            <div class="err" id="errDate" role="alert" hidden></div>
+            <div class="field"><label for="dlgNote">备注<span class="optional">选填</span></label>
+              <textarea id="dlgNote" maxlength="500" rows="2" placeholder="补充一些细节">${K.esc(t.note)}</textarea></div>
+            <div class="dialog-tools">
+              <button type="button" class="editor-tool" id="dlgColorToggle" aria-controls="dlgColorPanel" aria-expanded="false"><span class="color-dot" id="dlgColorDot" aria-hidden="true"></span>颜色${chevron}</button>
+              <button type="button" class="editor-tool" id="dlgRemindToggle" aria-controls="dlgRemindPanel" aria-expanded="false"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8a5 5 0 0 1 10 0v4l1.5 2h-13L5 12V8Zm3 8h4"/></svg><span id="dlgRemindLabel"></span>${chevron}</button>
+              <label class="pin-tool" title="排在其他日程前面"><input type="checkbox" id="dlgPinned" ${t.pinned ? 'checked' : ''}>置顶</label>
+            </div>
+            <div class="editor-drawer" id="dlgColorPanel" aria-label="日程颜色" hidden>
+              <div class="swatches" id="dlgPresets"></div>
+              <div id="dlgRecentWrap"><div class="sw-sub">最近使用</div><div class="swatches" id="dlgRecent"></div></div>
+              <div class="custom-color"><label for="dlgPicker">自定义</label><input type="color" id="dlgPicker" title="取色器"><input type="text" id="dlgHex" aria-label="颜色 HEX 值" maxlength="7" spellcheck="false"></div>
+            </div>
+            <div class="editor-drawer" id="dlgRemindPanel" aria-label="日程提醒" hidden>
+              <div class="remind-mode">
+                <label class="check"><input type="radio" name="dlgRemind" value="global" ${t.remind ? '' : 'checked'}>沿用统一设置</label>
+                <label class="check"><input type="radio" name="dlgRemind" value="custom" ${t.remind ? 'checked' : ''}>单独设置</label>
+              </div>
+              <p class="remind-summary" id="dlgGlobalSummary" ${t.remind ? 'hidden' : ''}>${remindSummary(g)}</p>
+              <div class="remind-grid" id="dlgRemindGrid" ${t.remind ? '' : 'hidden'}>
+                <label class="check"><input type="checkbox" id="rSB" ${r.startBefore.on ? 'checked' : ''}>开始前 <input type="number" id="rSBd" aria-label="开始前几天提醒" min="1" max="365" value="${r.startBefore.days}"> 天</label>
+                <label class="check"><input type="checkbox" id="rSD" ${r.startDay ? 'checked' : ''}>开始当天</label>
+                <label class="check"><input type="checkbox" id="rEB" ${r.endBefore.on ? 'checked' : ''}>结束前 <input type="number" id="rEBd" aria-label="结束前几天提醒" min="1" max="365" value="${r.endBefore.days}"> 天</label>
+                <label class="check"><input type="checkbox" id="rED" ${r.endDay ? 'checked' : ''}>结束当天</label>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="err" id="errSave" hidden></div>
-        <div class="actions">
-          ${mode === 'edit' ? '<button type="button" class="danger-btn" id="dlgDelete">删除</button>' : ''}
-          <div class="spacer"></div>
-          <button type="button" class="plain-btn" id="dlgCancel">取消</button>
-          <button type="button" class="primary" id="dlgSave">保存</button>
+        <div class="dialog-footer">
+          <div class="err" id="errSave" role="alert" hidden></div>
+          <div class="actions">
+            ${mode === 'edit' ? '<button type="button" class="danger-btn" id="dlgDelete">删除</button>' : ''}
+            <div class="spacer"></div>
+            <button type="button" class="plain-btn" id="dlgCancel">取消</button>
+            <button type="button" class="primary" id="dlgSave">保存</button>
+          </div>
         </div>
       </div>`;
     modal.hidden = false;
     wire();
     paintColors();
     updatePreview();
+    updateRemindLabel();
+    layoutObserver = new ResizeObserver(() => {
+      if (layoutFrame) return;
+      layoutFrame = requestAnimationFrame(() => { layoutFrame = 0; measureDialog(); });
+    });
+    modal.querySelectorAll('.dialog-header, .dialog-fields, .dialog-footer').forEach(el => layoutObserver.observe(el));
+    measureDialog();
     q('dlgTitle').focus();
     W2App.refreshBlock();
+  }
+
+  // 按完整表单内容申请窗口空间；空间不足时只滚动中间区域，操作按钮固定。
+  function measureDialog() {
+    if (!ctx) return;
+    const styles = getComputedStyle(modal);
+    const panel = $('appShell'), panelStyle = getComputedStyle(panel);
+    const height = [...modal.querySelectorAll('.dialog-header, .dialog-fields, .dialog-footer')]
+      .reduce((sum, el) => sum + el.getBoundingClientRect().height, 2)
+      + parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom)
+      + parseFloat(panelStyle.borderTopWidth) + parseFloat(panelStyle.borderBottomWidth);
+    panel.style.setProperty('--dialog-height', `${Math.ceil(height)}px`);
+  }
+
+  function togglePanel(name) {
+    const opening = q(`dlg${name}Panel`).hidden;
+    for (const part of ['Color', 'Remind']) {
+      const show = opening && part === name;
+      q(`dlg${part}Panel`).hidden = !show;
+      q(`dlg${part}Toggle`).setAttribute('aria-expanded', String(show));
+    }
+  }
+
+  function readReminder() {
+    if (modal.querySelector('input[name="dlgRemind"]:checked').value !== 'custom') return null;
+    return {
+      startBefore: { on: q('rSB').checked, days: +q('rSBd').value || 1 }, startDay: q('rSD').checked,
+      endBefore: { on: q('rEB').checked, days: +q('rEBd').value || 1 }, endDay: q('rED').checked,
+    };
+  }
+
+  function updateRemindLabel() {
+    const custom = readReminder(), rules = custom || state().settings.reminder;
+    const summary = remindSummary(rules);
+    q('dlgRemindLabel').textContent = summary === '不提醒' ? '不提醒' : custom ? '提醒 · 单独' : '提醒 · 统一';
+    q('dlgRemindToggle').title = summary;
   }
 
   function showErr(id, msg) { q(id).textContent = msg; q(id).hidden = false; }
   function hideErr(id) { q(id).hidden = true; }
 
   function wire() {
+    q('dlgColorToggle').addEventListener('click', () => togglePanel('Color'));
+    q('dlgRemindToggle').addEventListener('click', () => togglePanel('Remind'));
     q('dlgTitle').addEventListener('input', () => { hideErr('errTitle'); updatePreview(); });
     q('dlgTitle').addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });   // 标题只有一行，Enter 没有反应
     ['dlgStart', 'dlgEnd'].forEach(id => q(id).addEventListener('input', () => hideErr('errDate')));
     q('dlgPicker').addEventListener('input', e => setColor(e.target.value));
     q('dlgHex').addEventListener('input', e => { const v = e.target.value.trim(); if (C.isHex(v)) setColor(v, true); });
     modal.querySelectorAll('input[name="dlgRemind"]').forEach(el => el.addEventListener('change', () => {
-      q('dlgRemindGrid').classList.toggle('off', modal.querySelector('input[name="dlgRemind"]:checked').value !== 'custom');
+      const custom = modal.querySelector('input[name="dlgRemind"]:checked').value === 'custom';
+      q('dlgRemindGrid').hidden = !custom;
+      q('dlgGlobalSummary').hidden = custom;
+      updateRemindLabel();
     }));
+    q('dlgRemindGrid').addEventListener('input', updateRemindLabel);
     q('dlgCancel').addEventListener('click', close);
     q('dlgSave').addEventListener('click', save);
     const del = q('dlgDelete');
@@ -1229,12 +1379,13 @@ const TaskDialog = (() => {
 
   function paintColors() {
     const cur = ctx.color;
-    const sw = (hex, title) => `<button type="button" class="swatch${hex.toUpperCase() === cur ? ' on' : ''}" data-c="${hex}" title="${title}" style="background:${hex}"></button>`;
+    const sw = (hex, title) => `<button type="button" class="swatch${hex.toUpperCase() === cur ? ' on' : ''}" data-c="${hex}" title="${title}" aria-label="${title}" aria-pressed="${hex.toUpperCase() === cur}" style="background:${hex}"></button>`;
     q('dlgPresets').innerHTML = C.PRESETS.map(([name, hex]) => sw(hex, name)).join('');
     const recent = state().settings.recentColors || [];
     q('dlgRecentWrap').hidden = !recent.length;
     q('dlgRecent').innerHTML = recent.map(hex => sw(hex, hex)).join('');
     q('dlgPicker').value = cur.toLowerCase();
+    q('dlgColorDot').style.background = cur;
     modal.querySelectorAll('.swatch').forEach(b => { b.onclick = () => setColor(b.dataset.c); });
   }
 
@@ -1248,7 +1399,7 @@ const TaskDialog = (() => {
   // 顶部预览条：用当前标题和颜色实时画出来，直接看到条上文字的效果
   function updatePreview() {
     const el = q('dlgPreview');
-    el.textContent = q('dlgTitle').value.trim() || '日程标题';
+    el.textContent = q('dlgTitle').value.trim() || '预览';
     el.style.background = ctx.color;
     el.style.color = C.barText(ctx.color);
     if (document.activeElement !== q('dlgHex')) q('dlgHex').value = ctx.color;
@@ -1262,11 +1413,7 @@ const TaskDialog = (() => {
     else if (endDate < startDate) { showErr('errDate', '结束日期不能早于开始日期'); bad = true; }
     if (bad) return;
     hideErr('errSave');
-    const custom = modal.querySelector('input[name="dlgRemind"]:checked').value === 'custom';
-    const remind = !custom ? null : {
-      startBefore: { on: q('rSB').checked, days: +q('rSBd').value || 1 }, startDay: q('rSD').checked,
-      endBefore: { on: q('rEB').checked, days: +q('rEBd').value || 1 }, endDay: q('rED').checked,
-    };
+    const remind = readReminder();
     const data = { title, startDate, endDate, color: ctx.color, note: q('dlgNote').value, pinned: q('dlgPinned').checked, remind };
     const mode = ctx.mode;
     q('dlgSave').disabled = true;
@@ -1294,11 +1441,14 @@ const TaskDialog = (() => {
   }
 
   function close() {
-    const wasNew = ctx && ctx.mode === 'new';
+    layoutObserver?.disconnect();
+    layoutObserver = null;
+    cancelAnimationFrame(layoutFrame);
+    layoutFrame = 0;
     ctx = null;
     modal.hidden = true;
     modal.innerHTML = '';
-    if (wasNew) W2App.exitNewMode();   // 取消或保存后都退出新建状态
+    $('appShell').style.removeProperty('--dialog-height');
     W2App.refreshBlock();
   }
 
@@ -1354,27 +1504,31 @@ const Settings = (() => {
   const page = $('settings');
   const q = id => document.getElementById(id);
   let isOpenFlag = false;
+  let editingAppearance = false, appearanceRevision = 0;
 
-  // 恢复默认用；和主进程 store.js 里的默认外观保持一致
-  const DEFAULT_AP = { panelColor: '#000000', panelOpacity: 28, blur: 14, textColor: '#FFFFFF', barFontSize: 10, barHeight: 12, width: 420 };
+  const A = RCDesktopAppearance;
+  const DEFAULT_AP = A.DEFAULT;
   const SLIDERS = [
-    ['panelOpacity', '底板不透明度', 0, 100, 1, v => `${v}%`],
-    ['blur', '模糊强度', 0, 40, 1, v => `${v}px`],
-    ['barFontSize', '甘特条字号', 7, 12, 0.5, v => `${v}px`],
-    ['barHeight', '甘特条高度', 6, 18, 1, v => `${v}px`],
-    ['width', '挂件宽度', 320, 600, 10, v => `${v}px`],
+    ['panelOpacity', '玻璃不透明度', ...A.LIMITS.panelOpacity, v => `${v}%`],
+    ['width', '挂件宽度', ...A.LIMITS.width, v => `${v}px`],
+    ['dateFontSize', '日期字号', ...A.LIMITS.dateFontSize, v => `${v}px`],
+    ['barFontSize', '甘特条字号', ...A.LIMITS.barFontSize, v => `${v}px`],
+    ['barHeight', '甘特条高度', ...A.LIMITS.barHeight, v => `${v}px`],
   ];
+  const sliderRows = rows => rows.map(([k, name, min, max, step]) => `<div class="srow"><label for="st_${k}">${name}</label>`
+    + `<input type="range" id="st_${k}" min="${min}" max="${max}" step="${step}"><output id="st_${k}_out" for="st_${k}"></output></div>`).join('');
   const state = () => W2App.App.state;
 
   function build() {
     page.innerHTML = `
       <div class="page-head"><button type="button" class="ghost" id="stBack">‹ 返回</button><h2>设置</h2></div>
       <div class="group"><h3>桌面挂件外观</h3>
-        <div class="srow"><label for="st_panelColor">底板颜色</label><input type="color" id="st_panelColor"><span></span></div>
-        ${SLIDERS.map(([k, name, min, max, step]) => `<div class="srow"><label for="st_${k}">${name}</label>`
-          + `<input type="range" id="st_${k}" min="${min}" max="${max}" step="${step}"><output id="st_${k}_out"></output></div>`).join('')}
-        <div class="srow"><label for="st_textColor">字体颜色</label><input type="color" id="st_textColor"><output id="stContrast"></output></div>
-        <div class="warn" id="stContrastWarn" hidden>对比度偏低，小字可能看不清</div>
+        ${sliderRows(SLIDERS.slice(0, 3))}
+        <div class="srow"><label for="st_blur">磨砂效果</label><select id="st_blur">${A.GLASS_LEVELS.map(item => `<option value="${item.value}">${item.label}</option>`).join('')}</select><span></span></div>
+        <div class="warn" id="stGlassWarn" hidden>这一版桌面挂件暂未接入磨砂，当前使用透明底板；你的磨砂设置会保留</div>
+        <div class="srow"><label for="st_panelColor">玻璃底色</label><input type="color" id="st_panelColor"><span></span></div>
+        <div class="srow"><label for="st_textColor">文字颜色</label><input type="color" id="st_textColor"><span></span></div>
+        ${sliderRows(SLIDERS.slice(3))}
         <div class="warn" id="stBarWarn" hidden>条高太小，文字可能被裁切</div>
         <div class="btn-row"><button type="button" class="plain-btn" id="stReset">恢复默认</button></div>
       </div>
@@ -1403,26 +1557,43 @@ const Settings = (() => {
 
   // 从控件读出当前外观（拖动中还没保存的值）
   function current() {
-    const ap = { panelColor: q('st_panelColor').value.toUpperCase(), textColor: q('st_textColor').value.toUpperCase() };
+    const ap = { panelColor: q('st_panelColor').value.toUpperCase(), textColor: q('st_textColor').value.toUpperCase(), blur: +q('st_blur').value };
     for (const [k] of SLIDERS) ap[k] = +q(`st_${k}`).value;
     return ap;
   }
 
   function updateHints(ap) {
     for (const [k, , , , , fmt] of SLIDERS) q(`st_${k}_out`).textContent = fmt(ap[k]);
-    const c = C.panelContrast(ap.textColor, ap.panelColor, ap.panelOpacity / 100, state().w1.wallAvg);
-    q('stContrast').textContent = `对比度 ${c.toFixed(1)}`;
-    q('stContrastWarn').hidden = c >= 4.5;
+    q('stGlassWarn').hidden = ap.blur === 0 || state().w1.glass?.available !== false;
     q('stBarWarn').hidden = ap.barHeight >= ap.barFontSize + 2;
   }
 
-  const saveAp = (patch, msg) => rc.saveSettings({ w1: { appearance: patch } }).then(res => W2App.report(res, msg || '已保存'));
+  async function saveAp(patch, msg) {
+    const revision = ++appearanceRevision;
+    editingAppearance = false;
+    let res;
+    try { res = await rc.saveSettings({ w1: { appearance: patch } }); }
+    catch (_) { res = { ok: false }; }
+    // 新一轮拖动已经开始时，不用上一轮保存的回调覆盖当前预览。
+    if (revision === appearanceRevision) {
+      rc.previewAppearance(null);
+      render();
+    }
+    W2App.report(res, msg || '已保存');
+    return res;
+  }
 
   function wire() {
     q('stBack').addEventListener('click', close);
-    for (const key of ['panelColor', 'textColor', ...SLIDERS.map(s => s[0])]) {
+    for (const key of ['panelColor', 'textColor', 'blur', ...SLIDERS.map(s => s[0])]) {
       const el = q(`st_${key}`);
-      el.addEventListener('input', () => { const ap = current(); updateHints(ap); rc.previewAppearance(ap); });
+      el.addEventListener('input', () => {
+        editingAppearance = true;
+        appearanceRevision++;
+        const ap = current();
+        updateHints(ap);
+        rc.previewAppearance(ap);
+      });
       el.addEventListener('change', () => { const ap = current(); saveAp({ [key]: ap[key] }); });   // 松手 / 选完颜色后才保存
     }
     q('stReset').addEventListener('click', () => saveAp(DEFAULT_AP, '已恢复默认外观'));
@@ -1446,13 +1617,16 @@ const Settings = (() => {
   // 用最新数据刷新控件（保存成功后主进程会推新数据过来）
   function render() {
     if (!isOpenFlag || !page.firstChild) return;
-    const s = state(), ap = s.settings.w1.appearance, w1 = s.w1;
-    q('st_panelColor').value = ap.panelColor.toLowerCase();
-    q('st_textColor').value = ap.textColor.toLowerCase();
-    for (const [k] of SLIDERS) q(`st_${k}`).value = ap[k];
-    updateHints(ap);
+    const s = state(), ap = A.normalize(s.settings.w1.appearance), w1 = s.w1;
+    if (!editingAppearance) {
+      q('st_panelColor').value = ap.panelColor.toLowerCase();
+      q('st_textColor').value = ap.textColor.toLowerCase();
+      q('st_blur').value = String(A.glassLevel(ap.blur));
+      for (const [k] of SLIDERS) q(`st_${k}`).value = ap[k];
+    }
+    updateHints(editingAppearance ? current() : ap);
     q('stW1State').textContent = !w1.pinned ? '摆放中：可以拖动桌面挂件，摆好后点「钉住」'
-      : w1.degraded ? '桌面嵌入失败，已切换为置底显示' : '已钉住在桌面上';
+      : w1.degraded ? '桌面挂靠失败，已切换为置底显示' : '已钉住在桌面上';
     q('stPin').textContent = w1.pinned ? '解锁桌面挂件' : '钉住桌面挂件';
     const r = s.settings.reminder;
     q('gSB').checked = r.startBefore.on; q('gSBd').value = r.startBefore.days; q('gSD').checked = r.startDay;
@@ -1462,7 +1636,7 @@ const Settings = (() => {
 
   function open() {
     if (isOpenFlag) return;
-    if (W2App.App.newMode) W2App.exitNewMode();
+    W2App.clearSelection();
     isOpenFlag = true;
     page.hidden = false;
     build();
@@ -1472,6 +1646,8 @@ const Settings = (() => {
   function close() {
     if (!isOpenFlag) return;
     isOpenFlag = false;
+    editingAppearance = false;
+    appearanceRevision++;
     page.hidden = true;
     page.innerHTML = '';
     rc.previewAppearance(null);   // 丢掉没保存的预览

@@ -1,6 +1,7 @@
 // 入口：单实例、运行数据锁在项目目录里、创建两个窗口和托盘、每天 0 点刷新提醒
 const { app, ipcMain, powerMonitor, screen } = require('electron');
 const P = require('./paths');
+if (P.SELFTEST) require('./selftest-runtime').install();
 
 app.setPath('userData', P.USERDATA);
 app.setPath('sessionData', P.USERDATA);
@@ -12,6 +13,14 @@ if (!app.requestSingleInstanceLock()) app.quit();
 else app.whenReady().then(start);
 
 function start() {
+  if (P.SELFTEST && process.argv.includes('--desktop-headless')) {
+    require('./w1-host-selftest').run();
+    return;
+  }
+  if (P.SELFTEST && process.argv.includes('--desktop-host-smoke')) {
+    require('./w1-desktop-host-smoke').run();
+    return;
+  }
   const { Store } = require('./store');
   const { W1 } = require('./w1');
   const { W2 } = require('./w2');
@@ -27,9 +36,10 @@ function start() {
 
   const state = () => ({
     ...store.snapshot(),
-    w1: { pinned: !!store.settings.w1.pinned, embedded: w1.embedded, degraded: w1.degraded, wallAvg: w1.wallAvg },
+    w1: { pinned: !!store.settings.w1.pinned, embedded: w1.embedded, degraded: w1.degraded, glass: w1.glass.status },
   });
   const broadcast = () => {
+    w1.applyGlass();
     const s = state();
     w1.send('state', s);
     w2.send('state', s);
@@ -86,7 +96,7 @@ function start() {
   ipcMain.handle('task:delete', (e, id) => store.deleteTask(id));
   ipcMain.handle('reminder:confirm', (e, id) => store.confirmReminder(id));
   ipcMain.handle('settings:save', (e, patch) => store.saveSettings(patch));
-  ipcMain.on('appearance:preview', (e, ap) => w1.send('w1:preview', ap));
+  ipcMain.on('appearance:preview', (e, ap) => { w1.previewAppearance(ap); broadcast(); });
   ipcMain.handle('autostart:set', (e, on) => setAutoStart(!!on));
 
   // —— 提醒：每次启动检查一遍；每天 0 点刷新；睡眠唤醒后补做；每分钟兜底检查日期有没有变 ——

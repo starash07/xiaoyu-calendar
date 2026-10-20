@@ -8,15 +8,18 @@ const W = require('./win32');
 const D = require('../renderer/shared/dates');
 const A = require('../renderer/shared/appearance');
 const { Store } = require('./store');
-const getDesktopWindow = require('koffi').load('user32.dll').func('intptr __stdcall GetDesktopWindow()');
 const getWindowLong = require('koffi').load('user32.dll').func('intptr __stdcall GetWindowLongPtrW(intptr hwnd, int index)');
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function run({ store, w1, w2, broadcast }) {
   assert.ok(P.SELFTEST && P.DATA.endsWith('.data-selftest'), '短测只能使用独立数据');
   const started = Date.now(), log = [];
-  const note = (name, value) => { log.push({ name, value }); console.log('[desktop-smoke]', name, JSON.stringify(value)); };
+  const note = (name, value) => { log.push({ name, value }); require('./selftest-runtime').log('[desktop-smoke]', name, JSON.stringify(value)); };
   const js = (win, code) => win.webContents.executeJavaScript(code);
+  const nativeBounds = () => {
+    const r = W.windowRect(w1.hwnd), scale = w1.surface.scale;
+    return { x: r.left / scale, y: r.top / scale, width: (r.right - r.left) / scale, height: (r.bottom - r.top) / scale };
+  };
   const saveResult = () => fs.writeFileSync(path.join(P.SHOTS, 'w1-smoke-result.json'), JSON.stringify({ elapsedMs: Date.now() - started, log }, null, 2));
   fs.mkdirSync(P.SHOTS, { recursive: true });
   const watchdog = setTimeout(() => {
@@ -45,31 +48,35 @@ async function run({ store, w1, w2, broadcast }) {
     broadcast();
     await wait(450);
     const snapshot = () => js(w1.win, `(() => {
-      const panel = document.getElementById('panel'), bg = document.getElementById('bg'), tint = document.getElementById('tint');
+      const panel = document.getElementById('panel'), tint = document.getElementById('tint');
       const cal = document.getElementById('cal'), box = document.getElementById('details'), rect = panel.getBoundingClientRect();
       return { width: rect.width, height: rect.height, calendarTop: cal.getBoundingClientRect().top,
         font: getComputedStyle(document.querySelector('.cal-dc')).fontSize,
         barFont: getComputedStyle(document.querySelector('.cal-bar')).fontSize,
-        blur: getComputedStyle(bg).filter, tint: getComputedStyle(tint).backgroundColor,
+        tint: getComputedStyle(tint).backgroundColor,
         text: getComputedStyle(panel).color, weekend: getComputedStyle(document.querySelector('.cal-wd span:nth-child(6)')).color,
         todayFill: getComputedStyle(document.querySelector('.cal-dc.today .date-number')).backgroundColor,
         barText: getComputedStyle(document.querySelector('.cal-bar')).color,
         detail: box.classList.contains('show'), flag: !document.getElementById('flag').hidden,
         ids: [...new Set([...document.querySelectorAll('.cal-bar')].map(b => b.dataset.id))],
-        wallpaper: getComputedStyle(bg).backgroundImage !== 'none', backgroundPosition: getComputedStyle(bg).backgroundPosition };
+        wallpaper: !!document.getElementById('bg') || [...document.querySelectorAll('*')].some(el => getComputedStyle(el).backgroundImage.includes('url(')) };
     })()`);
-    const base = await snapshot(), nativeBase = w1.win.getBounds();
+    const base = await snapshot(), nativeBase = nativeBounds();
     assert.deepEqual(base.ids.sort(), ['smoke-day', 'smoke-main', 'smoke-other']);
     assert.equal(base.font, '17px'); assert.equal(base.width, 420); assert.equal(base.flag, true);
     assert.equal(base.weekend, 'rgb(138, 112, 214)'); assert.equal(base.todayFill, 'rgb(197, 229, 216)');
     assert.equal(base.barText, 'rgb(52, 86, 98)');
-    note('启动与选定外观', { width: base.width, dateFont: base.font, staticWallpaperLoaded: base.wallpaper, visibleTasks: base.ids.length });
+    assert.equal(base.wallpaper, false, '桌面页面又铺上了壁纸图片');
+    assert.deepEqual(w1.glass.status, {mode: 'none', available: false, reason: 'desktop-surface'});
+    assert.ok(w1.surface.metrics.frames > 0, '没有提交原生显示帧');
+    note('启动与选定外观', { width: base.width, dateFont: base.font, wallpaperImageRemoved: !base.wallpaper, nativeGlass: w1.glass.status, visibleTasks: base.ids.length });
+    note('真实磨砂', '当前显示方式尚未接入，本轮不验证磨砂，也不把它记为通过');
 
     const cursor = await js(w1.win, `(() => { const r = document.querySelector('.cal-bar[data-id="smoke-main"]').getBoundingClientRect(); return { x: r.left + 8, y: r.top + r.height / 2 }; })()`);
     w1.send('w1:cursor', cursor);
     const opening = [];
-    for (let i = 0; i < 12; i++) { await wait(30); opening.push(w1.win.getBounds().height); }
-    const expanded = await snapshot(), nativeExpanded = w1.win.getBounds();
+    for (let i = 0; i < 12; i++) { await wait(30); opening.push(nativeBounds().height); }
+    const expanded = await snapshot(), nativeExpanded = nativeBounds();
     assert.ok(expanded.detail && nativeExpanded.height > nativeBase.height + 30, '悬停未撑开真实窗口');
     assert.equal(nativeExpanded.y, nativeBase.y, '展开改变了窗口顶边');
     assert.equal(expanded.calendarTop, base.calendarTop, '展开挤动了日历');
@@ -78,10 +85,10 @@ async function run({ store, w1, w2, broadcast }) {
     fs.writeFileSync(path.join(P.SHOTS, 'w1-smoke-hover.png'), (await w1.win.webContents.capturePage()).toPNG());
     w1.send('w1:cursor', { x: -1, y: -1 });
     const closing = [];
-    for (let i = 0; i < 12; i++) { await wait(30); closing.push(w1.win.getBounds().height); }
-    assert.equal(w1.win.getBounds().height, nativeBase.height, '移开后没有恢复原高度');
+    for (let i = 0; i < 12; i++) { await wait(30); closing.push(nativeBounds().height); }
+    assert.equal(nativeBounds().height, nativeBase.height, '移开后没有恢复原高度');
     assert.ok(closing.some(h => h > nativeBase.height && h < nativeExpanded.height), '收起没有中间帧');
-    note('悬停与真实窗口缓动', { base: nativeBase.height, expanded: nativeExpanded.height, restored: w1.win.getBounds().height, opening, closing });
+    note('悬停与真实窗口缓动', { base: nativeBase.height, expanded: nativeExpanded.height, restored: nativeBounds().height, opening, closing });
 
     w2.show();
     await js(w2.win, 'Settings.open()');
@@ -89,7 +96,7 @@ async function run({ store, w1, w2, broadcast }) {
       ['panelOpacity', 32, s => assert.equal(s.tint, 'rgba(255, 255, 255, 0.32)')],
       ['width', 460, s => { assert.equal(s.width, 460); assert.equal(w1.size.w, 476); }],
       ['dateFontSize', 20, s => { assert.equal(s.font, '20px'); assert.equal(s.barFont, '10px'); }],
-      ['blur', 6, s => assert.ok(s.blur.includes('blur(6px)'))],
+      ['blur', 40, () => assert.deepEqual(w1.glass.status, {mode: 'none', available: false, reason: 'desktop-surface'})],
       ['panelColor', '#D7EEE5', s => assert.equal(s.tint, 'rgba(215, 238, 229, 0.32)')],
       ['textColor', '#21486B', s => assert.equal(s.text, 'rgb(33, 72, 107)')],
     ];
@@ -105,7 +112,7 @@ async function run({ store, w1, w2, broadcast }) {
     }
     const persisted = new Store();
     for (const [key, value] of checks) assert.equal(persisted.settings.w1.appearance[key], value, `${key} 重新读取后丢失`);
-    note('六项自由调节', '输入时预览、结束后保存、从磁盘重新读取均通过；日期字号不影响条目文字');
+    note('六项设置', '磨砂只验证设置保留，其余外观验证预览和保存；日期字号不影响条目文字');
     await js(w2.win, `document.getElementById('stReset').click()`);
     await wait(300);
     assert.deepEqual(store.settings.w1.appearance, A.DEFAULT);
@@ -122,26 +129,28 @@ async function run({ store, w1, w2, broadcast }) {
     assert.ok(!after.ids.includes('smoke-main'));
     note('提醒确认与完成同步', '确认后提醒标志消失，已完成条目从桌面隐藏');
 
-    const oldPosition = (await snapshot()).backgroundPosition.split(' ').map(parseFloat);
     w1.pos = { x: w1.pos.x - 50, y: w1.pos.y + 12 }; w1.place(); w1.sendInfo();
     await wait(200);
-    const movedPosition = (await snapshot()).backgroundPosition.split(' ').map(parseFloat);
-    if (base.wallpaper) {
-      assert.ok(Math.abs(movedPosition[0] - oldPosition[0] - 50) < 1);
-      assert.ok(Math.abs(movedPosition[1] - oldPosition[1] + 12) < 1);
-      note('位置变化后的壁纸对齐', '背景偏移随窗口位置同步');
-    }
+    assert.equal((await snapshot()).wallpaper, false);
     assert.ok(w1.setPinned(true).ok);
     await wait(350);
-    assert.ok(w1.embedded && !w1.degraded && W.parentOf(w1.hwnd) === w1.workerw, '未能嵌入桌面');
+    assert.ok(w1.embedded && !w1.degraded && W.ownerOf(w1.hwnd) === 0, '钉住时不应绑定桌面 owner');
+    assert.ok(W.isDesktopChild(w1.hwnd, w1.desktopLayers), '挂件没有进入桌面容器');
+    assert.ok(W.desktopOrderIntact(w1.hwnd, w1.desktopLayers), '桌面容器内的顺序不正确');
+    assert.deepEqual(w1.glass.status, {mode: 'none', available: false, reason: 'desktop-surface'});
+    // 模拟系统把挂件层级改变；不操作其他窗口、不触发全局显示桌面。
+    W.sendToBottom(w1.hwnd);
+    w1.checkHealth();
+    await wait(400);
+    assert.ok(W.desktopOrderIntact(w1.hwnd, w1.desktopLayers), '健康检查未恢复绘制顺序');
     assert.ok(w1.setPinned(false).ok);
     await wait(250);
-    note('解锁状态', { embedded: w1.embedded, parent: W.parentOf(w1.hwnd), parentClass: W.className(W.parentOf(w1.hwnd)), workerw: w1.workerw, nativeHandle: W.hwndOf(w1.win), cachedHandle: w1.hwnd,
-      alwaysOnTop: w1.win.isAlwaysOnTop(), style: Number(getWindowLong(w1.hwnd, -16)).toString(16), exStyle: Number(getWindowLong(w1.hwnd, -20)).toString(16) });
-    // SetParent(hwnd, NULL) 恢复到系统桌面父窗口；GetAncestor 不一定返回零。
-    assert.ok(!w1.embedded && W.parentOf(w1.hwnd) === Number(getDesktopWindow()), '解锁后未离开 WorkerW');
-    assert.ok(w1.win.isAlwaysOnTop(), '解锁后未恢复可摆放的置顶窗口');
-    note('钉住与解锁', '实际 WorkerW 父窗口切换通过');
+    note('解锁状态', { embedded: w1.embedded, parent: W.parentOf(w1.hwnd), owner: W.ownerOf(w1.hwnd), desktopLayers: w1.desktopLayers, nativeHandle: W.hwndOf(w1.win), cachedHandle: w1.hwnd,
+      alwaysOnTop: !!(W.exStyleOf(w1.hwnd) & 8), style: Number(getWindowLong(w1.hwnd, -16)).toString(16), exStyle: Number(getWindowLong(w1.hwnd, -20)).toString(16) });
+    assert.ok(!w1.embedded && W.ownerOf(w1.hwnd) === 0, '解锁后未解除桌面挂靠');
+    assert.ok(W.exStyleOf(w1.hwnd) & 8, '解锁后未恢复可摆放的置顶窗口');
+    assert.deepEqual(w1.glass.status, {mode: 'none', available: false, reason: 'desktop-surface'});
+    note('钉住与解锁', '桌面父子关系、顺序恢复与解锁通过；真实图标遮挡、全局显示桌面需另行实测');
     assert.equal(A.migrate({ panelColor: '#000000', panelOpacity: 28, textColor: '#FFFFFF', barHeight: 12 }, 1).dateFontSize, 17);
     assert.deepEqual(A.migrate({ panelColor: '#000000', panelOpacity: 28, textColor: '#FFFFFF', barHeight: 12 }, 1), A.DEFAULT);
     const custom = { ...A.DEFAULT, panelColor: '#B8E0D2', panelOpacity: 40, textColor: '#234567', width: 510 };

@@ -11,7 +11,6 @@ const Settings = (() => {
     ['panelOpacity', '玻璃不透明度', ...A.LIMITS.panelOpacity, v => `${v}%`],
     ['width', '挂件宽度', ...A.LIMITS.width, v => `${v}px`],
     ['dateFontSize', '日期字号', ...A.LIMITS.dateFontSize, v => `${v}px`],
-    ['blur', '磨砂强度', ...A.LIMITS.blur, v => `${v}px`],
     ['barFontSize', '甘特条字号', ...A.LIMITS.barFontSize, v => `${v}px`],
     ['barHeight', '甘特条高度', ...A.LIMITS.barHeight, v => `${v}px`],
   ];
@@ -23,11 +22,12 @@ const Settings = (() => {
     page.innerHTML = `
       <div class="page-head"><button type="button" class="ghost" id="stBack">‹ 返回</button><h2>设置</h2></div>
       <div class="group"><h3>桌面挂件外观</h3>
-        ${sliderRows(SLIDERS.slice(0, 4))}
+        ${sliderRows(SLIDERS.slice(0, 3))}
+        <div class="srow"><label for="st_blur">磨砂效果</label><select id="st_blur">${A.GLASS_LEVELS.map(item => `<option value="${item.value}">${item.label}</option>`).join('')}</select><span></span></div>
+        <div class="warn" id="stGlassWarn" hidden>这一版桌面挂件暂未接入磨砂，当前使用透明底板；你的磨砂设置会保留</div>
         <div class="srow"><label for="st_panelColor">玻璃底色</label><input type="color" id="st_panelColor"><span></span></div>
-        <div class="srow"><label for="st_textColor">文字颜色</label><input type="color" id="st_textColor"><output id="stContrast"></output></div>
-        <div class="warn" id="stContrastWarn" hidden>对比度偏低，小字可能看不清</div>
-        ${sliderRows(SLIDERS.slice(4))}
+        <div class="srow"><label for="st_textColor">文字颜色</label><input type="color" id="st_textColor"><span></span></div>
+        ${sliderRows(SLIDERS.slice(3))}
         <div class="warn" id="stBarWarn" hidden>条高太小，文字可能被裁切</div>
         <div class="btn-row"><button type="button" class="plain-btn" id="stReset">恢复默认</button></div>
       </div>
@@ -56,16 +56,14 @@ const Settings = (() => {
 
   // 从控件读出当前外观（拖动中还没保存的值）
   function current() {
-    const ap = { panelColor: q('st_panelColor').value.toUpperCase(), textColor: q('st_textColor').value.toUpperCase() };
+    const ap = { panelColor: q('st_panelColor').value.toUpperCase(), textColor: q('st_textColor').value.toUpperCase(), blur: +q('st_blur').value };
     for (const [k] of SLIDERS) ap[k] = +q(`st_${k}`).value;
     return ap;
   }
 
   function updateHints(ap) {
     for (const [k, , , , , fmt] of SLIDERS) q(`st_${k}_out`).textContent = fmt(ap[k]);
-    const c = C.panelContrast(ap.textColor, ap.panelColor, ap.panelOpacity / 100, state().w1.wallAvg);
-    q('stContrast').textContent = `对比度 ${c.toFixed(1)}`;
-    q('stContrastWarn').hidden = c >= 4.5;
+    q('stGlassWarn').hidden = ap.blur === 0 || state().w1.glass?.available !== false;
     q('stBarWarn').hidden = ap.barHeight >= ap.barFontSize + 2;
   }
 
@@ -86,7 +84,7 @@ const Settings = (() => {
 
   function wire() {
     q('stBack').addEventListener('click', close);
-    for (const key of ['panelColor', 'textColor', ...SLIDERS.map(s => s[0])]) {
+    for (const key of ['panelColor', 'textColor', 'blur', ...SLIDERS.map(s => s[0])]) {
       const el = q(`st_${key}`);
       el.addEventListener('input', () => {
         editingAppearance = true;
@@ -122,11 +120,12 @@ const Settings = (() => {
     if (!editingAppearance) {
       q('st_panelColor').value = ap.panelColor.toLowerCase();
       q('st_textColor').value = ap.textColor.toLowerCase();
+      q('st_blur').value = String(A.glassLevel(ap.blur));
       for (const [k] of SLIDERS) q(`st_${k}`).value = ap[k];
     }
     updateHints(editingAppearance ? current() : ap);
     q('stW1State').textContent = !w1.pinned ? '摆放中：可以拖动桌面挂件，摆好后点「钉住」'
-      : w1.degraded ? '桌面嵌入失败，已切换为置底显示' : '已钉住在桌面上';
+      : w1.degraded ? '桌面挂靠失败，已切换为置底显示' : '已钉住在桌面上';
     q('stPin').textContent = w1.pinned ? '解锁桌面挂件' : '钉住桌面挂件';
     const r = s.settings.reminder;
     q('gSB').checked = r.startBefore.on; q('gSBd').value = r.startBefore.days; q('gSD').checked = r.startDay;
@@ -136,7 +135,7 @@ const Settings = (() => {
 
   function open() {
     if (isOpenFlag) return;
-    if (W2App.App.newMode) W2App.exitNewMode();
+    W2App.clearSelection();
     isOpenFlag = true;
     page.hidden = false;
     build();

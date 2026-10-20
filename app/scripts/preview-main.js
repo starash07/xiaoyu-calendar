@@ -24,7 +24,7 @@ function previewApi(settings) {
     ['假期准备', 28, 33, '#F2BEAE', '确认行程，收拾行李。'],
   ];
   let state = {
-    today, settings, w1: { pinned: false, embedded: false, degraded: false, wallAvg: [180, 194, 208] },
+    today, settings, w1: { pinned: false, embedded: false, degraded: false, glass: { mode: 'none', available: false } },
     tasks: rows.map(([title, a, b, color, note, pinned, done], i) => ({
       id: `preview-${i}`, title, startDate: day(a), endDate: day(b), color, note,
       pinned: !!pinned, done: !!done, remind: null, createdAt: new Date(2026, 0, 1, 0, i).toISOString(), updatedAt: new Date().toISOString(),
@@ -82,7 +82,13 @@ function build() {
   html = html.replace('<title>小鱼日程表</title>', '<title>小鱼日程表 · 主界面交互预览</title>');
   html = html.replace('把日子安排好', '交互预览 · 数据不保存');
   html = html.replace('</head>', '<style>html { background: #ffffff; } body { width: min(480px, calc(100% - 32px)); margin: 18px auto; overflow: visible; }</style></head>');
-  html = html.replace(/<link rel="stylesheet" href="([^"]+)">/g, (_, file) => `<style>${fs.readFileSync(path.resolve(renderer, file), 'utf8')}</style>`);
+  html = html.replace(/<link rel="stylesheet" href="([^"]+)">/g, (_, file) => {
+    const cssPath = path.resolve(renderer, file);
+    // 本地 SVG（如自定义光标）一起打包，预览仍可独立打开。
+    const css = fs.readFileSync(cssPath, 'utf8').replace(/url\("([^"]+\.svg)"\)/g, (_match, asset) =>
+      `url("data:image/svg+xml;base64,${fs.readFileSync(path.resolve(path.dirname(cssPath), asset)).toString('base64')}")`);
+    return `<style>${css}</style>`;
+  });
   html = html.replace(/<script src="([^"]+)"><\/script>/g, (_, file) => {
     const bridge = file === 'w2.js' ? `<script>(${previewApi.toString()})(${JSON.stringify(DEFAULT_SETTINGS)});</script>` : '';
     return bridge + '<script>' + fs.readFileSync(path.resolve(renderer, file), 'utf8').replace(/<\/script/gi, '<\\/script') + '</script>';

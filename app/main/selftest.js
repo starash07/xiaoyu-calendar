@@ -10,7 +10,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 
 async function run({ store, w1, w2, broadcast }) {
   const log = [];
-  const note = (k, v) => { log.push([k, v]); console.log('[selftest]', k, JSON.stringify(v)); };
+  const note = (k, v) => { log.push([k, v]); require('./selftest-runtime').log('[selftest]', k, JSON.stringify(v)); };
   const shot = async (win, name) => fs.writeFileSync(path.join(P.SHOTS, `${name}.png`), (await win.webContents.capturePage()).toPNG());
   const js = (win, code) => win.webContents.executeJavaScript(code);
   let failed = false;
@@ -49,7 +49,9 @@ async function run({ store, w1, w2, broadcast }) {
     await wait(1000);
     note('嵌入结果', {
       embedded: w1.embedded, degraded: w1.degraded,
-      parentIsWorkerW: W.parentOf(w1.hwnd) === w1.workerw, rect: W.windowRect(w1.hwnd), pos: w1.pos,
+      desktopChild: W.isDesktopChild(w1.hwnd, w1.desktopLayers),
+      childOrder: W.desktopOrderIntact(w1.hwnd, w1.desktopLayers),
+      rect: W.windowRect(w1.hwnd), pos: w1.pos, visualVerified: false,
     });
     await shot(w1.win, 'w1-pinned');
 

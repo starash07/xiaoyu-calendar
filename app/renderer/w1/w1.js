@@ -1,14 +1,13 @@
 // W1 桌面挂件页面：只显示当月未完成的日程；只响应悬停，悬停时详情在日历下方浮现
 const D = RCDates, C = RCColors, K = RCCal, A = RCDesktopAppearance;
 const $ = id => document.getElementById(id);
-const panel = $('panel'), cal = $('cal'), detail = $('detail'), bg = $('bg'), tint = $('tint');
+const panel = $('panel'), cal = $('cal'), detail = $('detail'), tint = $('tint');
 const details = $('details');
 
 let state = null;      // 主进程推来的数据
-let info = null;       // 窗口位置、是否钉住、壁纸
+let info = null;       // 窗口位置、是否钉住
 let preview = null;    // 设置页拖滑块时的临时外观
 let hoverId = null;
-let wallImg = null, wallUrl = '';
 let calendarKey = '', detailKey = '', hideTimer = null;
 let sizeFrame = 0, lastSize = '', calendarWidth = 0;
 let cursor = { x: -1, y: -1 };
@@ -18,7 +17,6 @@ const appearance = () => A.normalize({ ...state?.settings.w1.appearance, ...(pre
 function applyAppearance() {
   const ap = appearance();
   panel.style.setProperty('--w', `${ap.width}px`);
-  panel.style.setProperty('--blur', `${ap.blur}px`);
   panel.style.setProperty('--date-size', `${ap.dateFontSize}px`);
   tint.style.background = C.rgba(ap.panelColor, ap.panelOpacity / 100);
   panel.style.setProperty('--fg', ap.textColor);
@@ -64,7 +62,6 @@ function render() {
   K.markBars(cal, 'hot', hoverId);
   renderDetail();
   renderFlag();
-  placeWallpaper();
   reportSize();
 }
 
@@ -110,47 +107,6 @@ function hitTest(x, y) {
   $('flagTip').hidden = !(!$('flag').hidden && el && el.closest('#flag'));
 }
 
-// 把模糊背景和真实壁纸对齐：算出壁纸在屏幕上的实际位置，再换成相对 .bg 的偏移
-function placeWallpaper() {
-  const w = info && info.wallpaper;
-  bg.style.backgroundColor = w?.backgroundColor || 'transparent';
-  if (!w?.url) {
-    wallUrl = '';
-    wallImg = null;
-    bg.style.backgroundImage = '';
-    return;
-  }
-  if (w.url !== wallUrl) {
-    wallUrl = w.url;
-    const img = wallImg = new Image();
-    bg.style.backgroundImage = '';
-    img.onload = () => {
-      if (wallImg !== img) return;
-      bg.style.backgroundImage = `url("${w.url}")`;
-      placeWallpaper();
-    };
-    img.onerror = () => { if (wallImg === img) bg.style.backgroundImage = ''; };
-    img.src = w.url;
-  }
-  if (!wallImg || !wallImg.naturalWidth) return;
-  const S = w.fit === 'span' ? info.wallpaperArea || info.display : info.display;
-  const scale = info.scaleFactor || 1;
-  const iw = wallImg.naturalWidth / scale, ih = wallImg.naturalHeight / scale;
-  let r;
-  if (w.fit === 'stretch') r = { x: S.x, y: S.y, w: S.width, h: S.height };
-  else if (w.fit === 'center') r = { x: S.x + (S.width - iw) / 2, y: S.y + (S.height - ih) / 2, w: iw, h: ih };
-  else if (w.fit === 'tile') r = { x: S.x, y: S.y, w: iw, h: ih, tile: true };
-  else {
-    const k = w.fit === 'fit' ? Math.min(S.width / iw, S.height / ih) : Math.max(S.width / iw, S.height / ih);
-    r = { x: S.x + (S.width - iw * k) / 2, y: S.y + (S.height - ih * k) / 2, w: iw * k, h: ih * k };
-  }
-  const br = bg.getBoundingClientRect();
-  const ox = info.pos.x + br.left, oy = info.pos.y + br.top;
-  bg.style.backgroundSize = `${r.w}px ${r.h}px`;
-  bg.style.backgroundPosition = `${r.x - ox}px ${r.y - oy}px`;
-  bg.style.backgroundRepeat = r.tile ? 'repeat' : 'no-repeat';
-}
-
 // 内容大小变了就告诉主进程：窗口顶部不动，底边跟着伸缩
 function reportSize() {
   if (sizeFrame) return;
@@ -180,7 +136,6 @@ rc.onW1Info(i => {
   panel.classList.toggle('dragging', !!i.dragging);
   panel.setAttribute('aria-label', i.loose ? '可以拖动的桌面日历' : '已钉住的桌面日历');
   if (placementChanged) hitTest(-1, -1);
-  placeWallpaper();
   reportSize();
 });
 
@@ -196,7 +151,7 @@ $('pinBtn').addEventListener('click', async () => {
   $('pinBtn').disabled = true;
   try {
     const res = await rc.setPinned(true);
-    $('placementNote').textContent = res.ok ? '拖动摆放位置' : '保存失败，请再试一次';
+    $('placementNote').textContent = res.ok ? '拖动摆放位置' : (res.error || '保存失败，请再试一次');
   } catch (_) { $('placementNote').textContent = '保存失败，请再试一次'; }
   finally { $('pinBtn').disabled = false; }
 });
