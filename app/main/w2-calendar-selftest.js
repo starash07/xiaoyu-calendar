@@ -21,7 +21,7 @@ async function run({ store, w2, broadcast, note, shot }) {
     task('spacing-review', '完成本月复盘', '24', '26', '#a8d9c5'),
   ];
   const metrics = () => js(`(() => {
-    const content = document.querySelector('.content'), bottom = document.querySelector('.bottom-bar');
+    const content = document.querySelector('.content'), toolbar = document.querySelector('.calendar-toolbar');
     const weeks = [...document.querySelectorAll('.cal-week')].map(week => {
       const rect = week.getBoundingClientRect();
       const bars = [...week.querySelectorAll('.cal-bar')].map(bar => {
@@ -35,8 +35,8 @@ async function run({ store, w2, broadcast, note, shot }) {
       weekend: getComputedStyle(document.querySelector('.cal-dc:nth-child(6)')).color,
       font: getComputedStyle(document.querySelector('.cal-dates')).fontSize,
       scrolls: content.scrollHeight > content.clientHeight,
-      bottomVisible: bottom.getBoundingClientRect().bottom <= innerHeight,
-      fits: document.documentElement.scrollWidth <= innerWidth && bottom.scrollWidth <= bottom.clientWidth };
+      toolbarVisible: toolbar.getBoundingClientRect().bottom <= innerHeight,
+      fits: document.documentElement.scrollWidth <= innerWidth && toolbar.scrollWidth <= toolbar.clientWidth };
   })()`);
   const show = async (tasks, width, month = 8, year = 2026) => {
     store.tasks = tasks;
@@ -49,7 +49,7 @@ async function run({ store, w2, broadcast, note, shot }) {
     return metrics();
   };
   const containsBars = state => {
-    assert.ok(state.fits && state.bottomVisible, '日历或底部按钮超出窗口');
+    assert.ok(state.fits && state.toolbarVisible, '日历或顶部操作排超出窗口');
     assert.ok(state.weeks.every(w => w.bars.every(b => b.top >= 32 && b.bottom <= w.height - 7)), '日程条超出所在周');
     assert.ok(Math.abs(win.getBounds().height - Math.ceil(state.shell)) <= 1, '真实窗口未跟随内容高度');
   };

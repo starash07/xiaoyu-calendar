@@ -50,7 +50,7 @@ body {
   background: var(--bg);
 }
 .app-shell.editing { min-height: min(var(--dialog-height, 420px), var(--available-height, 1000px)); }
-.app-shell.settings-open { min-height: min(640px, var(--available-height, 1000px)); }
+.app-shell.settings-open { min-height: min(var(--settings-height, 0px), var(--available-height, 1000px)); }
 
 button, input, textarea { font: inherit; }
 button { color: inherit; cursor: var(--date-cursor); transition: background-color .15s, color .15s, transform .15s; }
@@ -79,7 +79,6 @@ button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke
 .brand-mark i:nth-child(3) { background: #f0cf75; }
 .brand-mark i:nth-child(4) { background: #94d1ba; }
 .brand { font-size: 14px; font-weight: 700; letter-spacing: 1.5px; }
-.brand-note { color: var(--fg3); font-size: 10px; letter-spacing: .5px; }
 .icon { width: 29px; height: 29px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 9px; background: transparent; color: #6d8a9d; }
 .icon:hover, .ghost:hover { background: var(--hover); color: var(--fg); }
 .ghost { min-height: 31px; padding: 0 10px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 7px; background: transparent; color: var(--fg2); }
@@ -169,8 +168,8 @@ body:has(.calwrap.selecting), body:has(.calwrap.selecting) * { cursor: var(--dat
 .empty { margin: 14px 0 8px; text-align: center; font-size: 11px; color: var(--fg3); }
 .empty button { padding: 0 4px; border: 0; background: none; color: #a0603f; }
 
-/* 日历下方始终保留一排操作，日程很多时也能直接新建。 */
-.bottom-bar { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; margin: 14px 18px 0; }
+/* 操作排固定在日历上方，独立于内容滚动，切换月份时点击位置保持不动。 */
+.calendar-toolbar { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; margin: 14px 18px 0; }
 .month-pill { flex: 1; min-width: 92px; height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 0 4px; border-radius: 999px; background: #eaf5fb; }
 .month-step { width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; color: #5b819a; }
 .month-step:hover { background: rgba(255, 255, 255, .8); color: #3f7598; }
@@ -230,7 +229,7 @@ body:has(.calwrap.selecting), body:has(.calwrap.selecting) * { cursor: var(--dat
 .editor-tool[aria-expanded=true] .tool-chevron { transform: rotate(180deg); }
 .color-dot { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1px #31587312; }
 .pin-tool { margin-left: auto; }
-.pin-tool input { margin: 0; width: 12px; height: 12px; }
+.pin-tool input { margin: 0; }
 .pin-tool:has(input:checked) { background: #e9f4ef; color: #4e8875; }
 .editor-drawer { min-width: 0; padding: 12px; border-radius: 10px; background: #f7fafc; animation: drawer-in .16s ease-out; }
 .editor-drawer .swatches { gap: 9px; padding: 3px; }
@@ -269,6 +268,16 @@ body:has(.calwrap.selecting), body:has(.calwrap.selecting) * { cursor: var(--dat
 .custom-color input[type=text] { width: 96px; padding: 4px 6px; border: 1px solid var(--rule2); border-radius: 5px; background: var(--field); color: var(--fg); font: inherit; }
 .check { display: flex; align-items: center; gap: 6px; margin: 4px 0; font-size: 12px; cursor: var(--date-cursor); }
 input[type=checkbox], input[type=radio], input[type=range] { accent-color: #668eac; }
+/* 普通勾选与单选控件统一浅底色；设置中的圆润开关使用自己的样式。 */
+input[type=checkbox]:not(.settings-switch), input[type=radio] { appearance: none; display: inline-grid; place-content: center; flex-shrink: 0; width: 13px; height: 13px; margin: 0; vertical-align: middle; border: 1px solid #c2d4e0; border-radius: 4px; background: #edf4f8; color: #4f8975; box-shadow: inset 0 1px 0 #ffffffd9, 0 1px 2px #31587316; cursor: var(--date-cursor); transition: background-color .14s, border-color .14s, box-shadow .14s; }
+input[type=checkbox]:not(.settings-switch):hover:not(:disabled), input[type=radio]:hover:not(:disabled) { border-color: #a9c1d0; background: #e5f0f6; box-shadow: inset 0 1px 0 #ffffffd9, 0 1px 3px #31587320; }
+input[type=checkbox]:not(.settings-switch):checked, input[type=radio]:checked { border-color: #a5c8ba; background: #def0e8; }
+input[type=checkbox]:not(.settings-switch):checked:hover:not(:disabled), input[type=radio]:checked:hover:not(:disabled) { border-color: #91bdaa; background: #d1eade; }
+input[type=checkbox]:not(.settings-switch)::before { content: ""; width: 4px; height: 7px; border: solid currentColor; border-width: 0 1.6px 1.6px 0; transform: translateY(-1px) rotate(45deg); opacity: 0; transition: opacity .1s; }
+input[type=radio] { border-radius: 50%; }
+input[type=radio]::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: 0; transition: opacity .1s; }
+input[type=checkbox]:not(.settings-switch):checked::before, input[type=radio]:checked::before { opacity: 1; }
+input[type=checkbox]:not(.settings-switch):disabled, input[type=radio]:disabled { opacity: .45; box-shadow: none; cursor: default; }
 .remind-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; margin-top: 6px; padding-left: 22px; }
 .remind-grid input[type=number] { width: 48px; padding: 2px 4px; border: 1px solid var(--rule2); border-radius: 4px; background: var(--field); color: var(--fg); font: inherit; }
 .remind-grid.off { opacity: .45; pointer-events: none; }
@@ -281,20 +290,66 @@ input[type=checkbox], input[type=radio], input[type=range] { accent-color: #668e
 .confirm-box { width: 100%; max-width: 320px; padding: 18px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); }
 .confirm-box p { margin: 0 0 16px; font-size: 14px; word-break: break-word; }
 
-/* 设置页 */
-.page { position: fixed; inset: 0; z-index: 35; overflow-y: auto; padding: 0 20px 28px; border-radius: inherit; background: var(--bg); }
-.page-head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 8px; height: 52px; margin: 0 -4px 8px; padding: 0; background: var(--bg); border-bottom: 1px solid var(--rule); -webkit-app-region: drag; }
-.page-head button { -webkit-app-region: no-drag; }
-.page-head h2 { margin: 0; font-size: 16px; font-weight: 500; }
-.group { margin-top: 21px; }
-.group h3 { margin: 0 0 8px; font-size: 13px; color: var(--fg2); }
-.srow { display: grid; grid-template-columns: 96px 1fr 64px; align-items: center; gap: 10px; min-height: 36px; }
-.srow input[type=range] { width: 100%; accent-color: var(--accent); }
-.srow input[type=color] { width: 40px; height: 26px; padding: 0; border: 1px solid var(--rule2); border-radius: 5px; background: none; }
-.srow select { width: 100%; min-height: 28px; padding: 3px 8px; border: 1px solid var(--rule2); border-radius: 6px; background: var(--surface); color: var(--fg); font: inherit; }
-.srow output { text-align: right; font-variant-numeric: tabular-nums; color: var(--fg2); }
-.warn { margin: 4px 0 0 106px; font-size: 12px; color: var(--danger); }
-.btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+/* 设置是主卡片内的磨砂浮窗，日历仍在背后；外侧留出可点击关闭的空白。 */
+.settings-overlay { position: absolute; inset: 0; z-index: 35; display: flex; align-items: center; justify-content: center; padding: 24px 20px; border-radius: inherit; background: rgba(70, 100, 118, .09); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); transition: opacity .15s ease; }
+.settings-sheet { display: flex; flex-direction: column; width: 100%; max-width: 420px; max-height: 100%; min-height: 0; overflow: hidden; border: 1px solid rgba(255, 255, 255, .95); border-radius: 20px; background: rgba(251, 254, 255, .9); backdrop-filter: blur(18px) saturate(1.1); -webkit-backdrop-filter: blur(18px) saturate(1.1); box-shadow: 0 12px 32px #3158731f, inset 0 1px 0 #fff; animation: settings-in .18s cubic-bezier(.22, 1, .36, 1); transition: transform .15s ease, opacity .15s ease; }
+.settings-overlay.is-closing { opacity: 0; }
+.settings-overlay.is-closing .settings-sheet { transform: translateY(5px) scale(.985); opacity: 0; }
+.settings-header { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 13px 17px 10px; }
+.settings-header h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: 1px; }
+.settings-header .icon { width: 27px; height: 27px; color: #829aa9; background: #e9f1f580; }
+.settings-header .icon:hover { background: #e3edf3; color: var(--fg); }
+.settings-tabs { flex: 0 0 auto; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; padding: 3px; margin: 0 17px 12px; border-radius: 11px; background: #e7eff48c; }
+.settings-tabs button { min-width: 0; height: 29px; padding: 0 8px; border: 0; border-radius: 8px; background: none; color: #7993a5; font-size: 12px; }
+.settings-tabs button[aria-selected=true] { background: #fff; color: #416f8c; box-shadow: 0 1px 3px #3158730d; }
+.settings-tabs button:hover { color: #416f8c; }
+.settings-scroll { flex: 0 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-gutter: stable; padding: 0 12px 14px 17px; }
+.settings-panel { display: grid; gap: 10px; min-width: 0; animation: settings-tab-in .14s ease-out; }
+#stPanelAppearance { gap: 8px; }
+.settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; min-width: 0; }
+.settings-control { min-width: 0; padding: 10px 12px; border-radius: 12px; background: #eaf3f894; }
+.control-heading { display: flex; justify-content: space-between; align-items: center; gap: 5px; }
+.control-label { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
+.settings-help { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 15px; height: 15px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: #8ba4b3; }
+.settings-help svg { width: 14px; height: 14px; stroke-width: 1.3; }
+.settings-help:hover, .settings-help:focus-visible { color: #537e99; }
+.settings-control label { min-width: 0; color: #5e8095; font-size: 11px; }
+.settings-control output { flex-shrink: 0; color: #3e728f; font-size: 11px; font-variant-numeric: tabular-nums; }
+.settings-control input[type=range] { display: block; appearance: none; width: 100%; height: 16px; margin: 7px 0 0; padding: 0; background: transparent; cursor: var(--date-cursor); }
+.settings-control input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 8px; background: #cfdfe8; }
+.settings-control input[type=range]::-webkit-slider-thumb { appearance: none; width: 12px; height: 12px; margin-top: -4px; border: 2px solid #fff; border-radius: 50%; background: #81a6bc; box-shadow: 0 1px 3px #31587324; transition: background .15s, box-shadow .15s; }
+.settings-control input[type=range]:hover::-webkit-slider-thumb { background: #638da8; box-shadow: 0 0 0 3px #81a6bc20; }
+.settings-color { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; padding: 7px 12px; border-radius: 12px; background: #fff9; color: #638196; font-size: 11px; cursor: var(--date-cursor); }
+.settings-color input[type=color] { appearance: none; width: 28px; height: 25px; flex-shrink: 0; padding: 2px; border: 1px solid #dbe7ee; border-radius: 7px; background: #fff; cursor: var(--date-cursor); }
+.settings-color input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+.settings-color input[type=color]::-webkit-color-swatch { border: 0; border-radius: 4px; }
+.settings-notice { margin: 0; padding: 6px 10px; border-radius: 9px; background: #f8f0e6a8; color: #a28461; font-size: 10px; line-height: 1.6; }
+.settings-card { min-width: 0; padding: 13px; border-radius: 13px; background: #eaf3f894; }
+.settings-card h3 { margin: 0 0 8px; color: #54778f; font-size: 11px; font-weight: 600; }
+.settings-intro { margin: 0; color: #7d96a6; font-size: 11px; line-height: 1.7; }
+.settings-toggle-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 12px; cursor: var(--date-cursor); }
+.settings-toggle-row + .settings-intro { margin-top: 5px; }
+.settings-switch { appearance: none; position: relative; flex-shrink: 0; width: 30px; height: 18px; margin: 0; border: 0; border-radius: 99px; background: #cedde6; cursor: var(--date-cursor); transition: background .16s; }
+.settings-switch::before { content: ""; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px #31587320; transition: transform .16s cubic-bezier(.22, 1, .36, 1); }
+.settings-switch:checked { background: #88bea8; }
+.settings-switch:checked::before { transform: translateX(12px); }
+.reminder-option { display: grid; grid-template-columns: minmax(0, 1fr) auto 30px; align-items: center; gap: 10px; min-height: 38px; font-size: 12px; }
+.reminder-option + .reminder-option { border-top: 1px solid #dce8efb0; }
+.reminder-option > .settings-switch { grid-column: 3; }
+.reminder-option > label { cursor: var(--date-cursor); }
+.reminder-days { display: flex; align-items: center; gap: 6px; color: #7d96a6; font-size: 11px; }
+.reminder-days input { width: 48px; height: 26px; padding: 2px 4px; border: 1px solid #dce7ed; border-radius: 6px; background: #fff9; color: var(--fg); font: inherit; text-align: center; }
+.reminder-days input:disabled { opacity: .45; }
+.settings-actions { display: flex; gap: 8px; margin-top: 12px; }
+.settings-action { flex: 1; min-width: 0; min-height: 30px; padding: 5px 10px; border: 0; border-radius: 8px; background: #ffffffcf; color: #5d8097; font-size: 11px; }
+.settings-action:hover { background: #fff; color: #416f8c; }
+.settings-about { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 14px 0 4px; color: #7391a4; font-size: 12px; line-height: 1.8; }
+.settings-about small { color: #91a6b4; font-size: 10px; }
+.settings-footer { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 43px; padding: 8px 17px; border-top: 1px solid #e1ebf1a6; color: #8aa1b0; font-size: 10px; }
+.settings-reset { padding: 4px 8px; border: 0; border-radius: 7px; background: #e5eff57d; color: #7292a7; font-size: 10px; }
+.settings-reset:hover { background: #dcebf4; color: #416f8c; }
+@keyframes settings-in { from { opacity: 0; transform: translateY(6px) scale(.985); } to { opacity: 1; transform: none; } }
+@keyframes settings-tab-in { from { opacity: .5; transform: translateY(3px); } to { opacity: 1; transform: none; } }
 
 .cal-bar.flash { animation: flash .6s ease-in-out; }
 @keyframes flash { 0%, 100% { filter: none; } 50% { filter: brightness(1.15); } }
@@ -302,9 +357,8 @@ input[type=checkbox], input[type=radio], input[type=range] { accent-color: #668e
 @media (max-width: 420px) {
   .app-shell { --corner: 12px; }
   .top { padding: 0 13px; }
-  .brand-note { display: none; }
   .content { padding-left: 14px; padding-right: 14px; }
-  .bottom-bar, .detail-section { margin-left: 14px; margin-right: 14px; }
+  .calendar-toolbar, .detail-section { margin-left: 14px; margin-right: 14px; }
   .today-button, .new-button { padding: 0 10px; }
   .month-pill { padding: 0 2px; }
   .row2 { gap: 6px; }

@@ -13,6 +13,8 @@
     "selftest:desktop-headless": "electron . --selftest --desktop-headless",
     "selftest:calendar-selection": "electron scripts/check-calendar-selection.cjs --selftest",
     "selftest:task-dialog": "electron scripts/check-task-dialog.cjs --selftest",
+    "selftest:settings": "electron scripts/check-settings.cjs --selftest",
+    "selftest:panel-motion": "node scripts/check-panel-motion.cjs",
     "preview:main": "node scripts/preview-main.js --serve",
     "postinstall": "node node_modules/electron/install.js"
   },

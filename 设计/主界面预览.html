@@ -77,7 +77,7 @@ body {
   background: var(--bg);
 }
 .app-shell.editing { min-height: min(var(--dialog-height, 420px), var(--available-height, 1000px)); }
-.app-shell.settings-open { min-height: min(640px, var(--available-height, 1000px)); }
+.app-shell.settings-open { min-height: min(var(--settings-height, 0px), var(--available-height, 1000px)); }
 
 button, input, textarea { font: inherit; }
 button { color: inherit; cursor: var(--date-cursor); transition: background-color .15s, color .15s, transform .15s; }
@@ -106,7 +106,6 @@ button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke
 .brand-mark i:nth-child(3) { background: #f0cf75; }
 .brand-mark i:nth-child(4) { background: #94d1ba; }
 .brand { font-size: 14px; font-weight: 700; letter-spacing: 1.5px; }
-.brand-note { color: var(--fg3); font-size: 10px; letter-spacing: .5px; }
 .icon { width: 29px; height: 29px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 9px; background: transparent; color: #6d8a9d; }
 .icon:hover, .ghost:hover { background: var(--hover); color: var(--fg); }
 .ghost { min-height: 31px; padding: 0 10px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 7px; background: transparent; color: var(--fg2); }
@@ -257,7 +256,7 @@ body:has(.calwrap.selecting), body:has(.calwrap.selecting) * { cursor: var(--dat
 .editor-tool[aria-expanded=true] .tool-chevron { transform: rotate(180deg); }
 .color-dot { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1px #31587312; }
 .pin-tool { margin-left: auto; }
-.pin-tool input { margin: 0; width: 12px; height: 12px; }
+.pin-tool input { margin: 0; }
 .pin-tool:has(input:checked) { background: #e9f4ef; color: #4e8875; }
 .editor-drawer { min-width: 0; padding: 12px; border-radius: 10px; background: #f7fafc; animation: drawer-in .16s ease-out; }
 .editor-drawer .swatches { gap: 9px; padding: 3px; }
@@ -296,6 +295,16 @@ body:has(.calwrap.selecting), body:has(.calwrap.selecting) * { cursor: var(--dat
 .custom-color input[type=text] { width: 96px; padding: 4px 6px; border: 1px solid var(--rule2); border-radius: 5px; background: var(--field); color: var(--fg); font: inherit; }
 .check { display: flex; align-items: center; gap: 6px; margin: 4px 0; font-size: 12px; cursor: var(--date-cursor); }
 input[type=checkbox], input[type=radio], input[type=range] { accent-color: #668eac; }
+/* 普通勾选与单选控件统一浅底色；设置中的圆润开关使用自己的样式。 */
+input[type=checkbox]:not(.settings-switch), input[type=radio] { appearance: none; display: inline-grid; place-content: center; flex-shrink: 0; width: 13px; height: 13px; margin: 0; vertical-align: middle; border: 1px solid #c2d4e0; border-radius: 4px; background: #edf4f8; color: #4f8975; box-shadow: inset 0 1px 0 #ffffffd9, 0 1px 2px #31587316; cursor: var(--date-cursor); transition: background-color .14s, border-color .14s, box-shadow .14s; }
+input[type=checkbox]:not(.settings-switch):hover:not(:disabled), input[type=radio]:hover:not(:disabled) { border-color: #a9c1d0; background: #e5f0f6; box-shadow: inset 0 1px 0 #ffffffd9, 0 1px 3px #31587320; }
+input[type=checkbox]:not(.settings-switch):checked, input[type=radio]:checked { border-color: #a5c8ba; background: #def0e8; }
+input[type=checkbox]:not(.settings-switch):checked:hover:not(:disabled), input[type=radio]:checked:hover:not(:disabled) { border-color: #91bdaa; background: #d1eade; }
+input[type=checkbox]:not(.settings-switch)::before { content: ""; width: 4px; height: 7px; border: solid currentColor; border-width: 0 1.6px 1.6px 0; transform: translateY(-1px) rotate(45deg); opacity: 0; transition: opacity .1s; }
+input[type=radio] { border-radius: 50%; }
+input[type=radio]::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: 0; transition: opacity .1s; }
+input[type=checkbox]:not(.settings-switch):checked::before, input[type=radio]:checked::before { opacity: 1; }
+input[type=checkbox]:not(.settings-switch):disabled, input[type=radio]:disabled { opacity: .45; box-shadow: none; cursor: default; }
 .remind-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; margin-top: 6px; padding-left: 22px; }
 .remind-grid input[type=number] { width: 48px; padding: 2px 4px; border: 1px solid var(--rule2); border-radius: 4px; background: var(--field); color: var(--fg); font: inherit; }
 .remind-grid.off { opacity: .45; pointer-events: none; }
@@ -308,20 +317,66 @@ input[type=checkbox], input[type=radio], input[type=range] { accent-color: #668e
 .confirm-box { width: 100%; max-width: 320px; padding: 18px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); }
 .confirm-box p { margin: 0 0 16px; font-size: 14px; word-break: break-word; }
 
-/* 设置页 */
-.page { position: fixed; inset: 0; z-index: 35; overflow-y: auto; padding: 0 20px 28px; border-radius: inherit; background: var(--bg); }
-.page-head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 8px; height: 52px; margin: 0 -4px 8px; padding: 0; background: var(--bg); border-bottom: 1px solid var(--rule); -webkit-app-region: drag; }
-.page-head button { -webkit-app-region: no-drag; }
-.page-head h2 { margin: 0; font-size: 16px; font-weight: 500; }
-.group { margin-top: 21px; }
-.group h3 { margin: 0 0 8px; font-size: 13px; color: var(--fg2); }
-.srow { display: grid; grid-template-columns: 96px 1fr 64px; align-items: center; gap: 10px; min-height: 36px; }
-.srow input[type=range] { width: 100%; accent-color: var(--accent); }
-.srow input[type=color] { width: 40px; height: 26px; padding: 0; border: 1px solid var(--rule2); border-radius: 5px; background: none; }
-.srow select { width: 100%; min-height: 28px; padding: 3px 8px; border: 1px solid var(--rule2); border-radius: 6px; background: var(--surface); color: var(--fg); font: inherit; }
-.srow output { text-align: right; font-variant-numeric: tabular-nums; color: var(--fg2); }
-.warn { margin: 4px 0 0 106px; font-size: 12px; color: var(--danger); }
-.btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+/* 设置是主卡片内的磨砂浮窗，日历仍在背后；外侧留出可点击关闭的空白。 */
+.settings-overlay { position: absolute; inset: 0; z-index: 35; display: flex; align-items: center; justify-content: center; padding: 24px 20px; border-radius: inherit; background: rgba(70, 100, 118, .09); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); transition: opacity .15s ease; }
+.settings-sheet { display: flex; flex-direction: column; width: 100%; max-width: 420px; max-height: 100%; min-height: 0; overflow: hidden; border: 1px solid rgba(255, 255, 255, .95); border-radius: 20px; background: rgba(251, 254, 255, .9); backdrop-filter: blur(18px) saturate(1.1); -webkit-backdrop-filter: blur(18px) saturate(1.1); box-shadow: 0 12px 32px #3158731f, inset 0 1px 0 #fff; animation: settings-in .18s cubic-bezier(.22, 1, .36, 1); transition: transform .15s ease, opacity .15s ease; }
+.settings-overlay.is-closing { opacity: 0; }
+.settings-overlay.is-closing .settings-sheet { transform: translateY(5px) scale(.985); opacity: 0; }
+.settings-header { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 13px 17px 10px; }
+.settings-header h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: 1px; }
+.settings-header .icon { width: 27px; height: 27px; color: #829aa9; background: #e9f1f580; }
+.settings-header .icon:hover { background: #e3edf3; color: var(--fg); }
+.settings-tabs { flex: 0 0 auto; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; padding: 3px; margin: 0 17px 12px; border-radius: 11px; background: #e7eff48c; }
+.settings-tabs button { min-width: 0; height: 29px; padding: 0 8px; border: 0; border-radius: 8px; background: none; color: #7993a5; font-size: 12px; }
+.settings-tabs button[aria-selected=true] { background: #fff; color: #416f8c; box-shadow: 0 1px 3px #3158730d; }
+.settings-tabs button:hover { color: #416f8c; }
+.settings-scroll { flex: 0 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-gutter: stable; padding: 0 12px 14px 17px; }
+.settings-panel { display: grid; gap: 10px; min-width: 0; animation: settings-tab-in .14s ease-out; }
+#stPanelAppearance { gap: 8px; }
+.settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; min-width: 0; }
+.settings-control { min-width: 0; padding: 10px 12px; border-radius: 12px; background: #eaf3f894; }
+.control-heading { display: flex; justify-content: space-between; align-items: center; gap: 5px; }
+.control-label { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
+.settings-help { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 15px; height: 15px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: #8ba4b3; }
+.settings-help svg { width: 14px; height: 14px; stroke-width: 1.3; }
+.settings-help:hover, .settings-help:focus-visible { color: #537e99; }
+.settings-control label { min-width: 0; color: #5e8095; font-size: 11px; }
+.settings-control output { flex-shrink: 0; color: #3e728f; font-size: 11px; font-variant-numeric: tabular-nums; }
+.settings-control input[type=range] { display: block; appearance: none; width: 100%; height: 16px; margin: 7px 0 0; padding: 0; background: transparent; cursor: var(--date-cursor); }
+.settings-control input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 8px; background: #cfdfe8; }
+.settings-control input[type=range]::-webkit-slider-thumb { appearance: none; width: 12px; height: 12px; margin-top: -4px; border: 2px solid #fff; border-radius: 50%; background: #81a6bc; box-shadow: 0 1px 3px #31587324; transition: background .15s, box-shadow .15s; }
+.settings-control input[type=range]:hover::-webkit-slider-thumb { background: #638da8; box-shadow: 0 0 0 3px #81a6bc20; }
+.settings-color { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; padding: 7px 12px; border-radius: 12px; background: #fff9; color: #638196; font-size: 11px; cursor: var(--date-cursor); }
+.settings-color input[type=color] { appearance: none; width: 28px; height: 25px; flex-shrink: 0; padding: 2px; border: 1px solid #dbe7ee; border-radius: 7px; background: #fff; cursor: var(--date-cursor); }
+.settings-color input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+.settings-color input[type=color]::-webkit-color-swatch { border: 0; border-radius: 4px; }
+.settings-notice { margin: 0; padding: 6px 10px; border-radius: 9px; background: #f8f0e6a8; color: #a28461; font-size: 10px; line-height: 1.6; }
+.settings-card { min-width: 0; padding: 13px; border-radius: 13px; background: #eaf3f894; }
+.settings-card h3 { margin: 0 0 8px; color: #54778f; font-size: 11px; font-weight: 600; }
+.settings-intro { margin: 0; color: #7d96a6; font-size: 11px; line-height: 1.7; }
+.settings-toggle-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 12px; cursor: var(--date-cursor); }
+.settings-toggle-row + .settings-intro { margin-top: 5px; }
+.settings-switch { appearance: none; position: relative; flex-shrink: 0; width: 30px; height: 18px; margin: 0; border: 0; border-radius: 99px; background: #cedde6; cursor: var(--date-cursor); transition: background .16s; }
+.settings-switch::before { content: ""; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px #31587320; transition: transform .16s cubic-bezier(.22, 1, .36, 1); }
+.settings-switch:checked { background: #88bea8; }
+.settings-switch:checked::before { transform: translateX(12px); }
+.reminder-option { display: grid; grid-template-columns: minmax(0, 1fr) auto 30px; align-items: center; gap: 10px; min-height: 38px; font-size: 12px; }
+.reminder-option + .reminder-option { border-top: 1px solid #dce8efb0; }
+.reminder-option > .settings-switch { grid-column: 3; }
+.reminder-option > label { cursor: var(--date-cursor); }
+.reminder-days { display: flex; align-items: center; gap: 6px; color: #7d96a6; font-size: 11px; }
+.reminder-days input { width: 48px; height: 26px; padding: 2px 4px; border: 1px solid #dce7ed; border-radius: 6px; background: #fff9; color: var(--fg); font: inherit; text-align: center; }
+.reminder-days input:disabled { opacity: .45; }
+.settings-actions { display: flex; gap: 8px; margin-top: 12px; }
+.settings-action { flex: 1; min-width: 0; min-height: 30px; padding: 5px 10px; border: 0; border-radius: 8px; background: #ffffffcf; color: #5d8097; font-size: 11px; }
+.settings-action:hover { background: #fff; color: #416f8c; }
+.settings-about { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 14px 0 4px; color: #7391a4; font-size: 12px; line-height: 1.8; }
+.settings-about small { color: #91a6b4; font-size: 10px; }
+.settings-footer { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 43px; padding: 8px 17px; border-top: 1px solid #e1ebf1a6; color: #8aa1b0; font-size: 10px; }
+.settings-reset { padding: 4px 8px; border: 0; border-radius: 7px; background: #e5eff57d; color: #7292a7; font-size: 10px; }
+.settings-reset:hover { background: #dcebf4; color: #416f8c; }
+@keyframes settings-in { from { opacity: 0; transform: translateY(6px) scale(.985); } to { opacity: 1; transform: none; } }
+@keyframes settings-tab-in { from { opacity: .5; transform: translateY(3px); } to { opacity: 1; transform: none; } }
 
 .cal-bar.flash { animation: flash .6s ease-in-out; }
 @keyframes flash { 0%, 100% { filter: none; } 50% { filter: brightness(1.15); } }
@@ -329,7 +384,6 @@ input[type=checkbox], input[type=radio], input[type=range] { accent-color: #668e
 @media (max-width: 420px) {
   .app-shell { --corner: 12px; }
   .top { padding: 0 13px; }
-  .brand-note { display: none; }
   .content { padding-left: 14px; padding-right: 14px; }
   .bottom-bar, .detail-section { margin-left: 14px; margin-right: 14px; }
   .today-button, .new-button { padding: 0 10px; }
@@ -348,7 +402,6 @@ input[type=checkbox], input[type=radio], input[type=range] { accent-color: #668e
 <header class="top">
   <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
   <span class="brand">小鱼日程表</span>
-  <span class="brand-note">交互预览 · 数据不保存</span>
   <span class="spacer"></span>
   <button class="icon settings-button" id="settingsBtn" type="button" title="设置" aria-label="设置"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10m4 0h2M4 17h2m4 0h10M14 4v6M6 14v6"/></svg></button>
   <button class="icon" id="closeBtn" type="button" title="收起窗口" aria-label="收起窗口"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M7 17 17 7"/></svg></button>
@@ -389,7 +442,7 @@ input[type=checkbox], input[type=radio], input[type=range] { accent-color: #668e
 <div class="toast" id="toast" hidden></div>
 <div class="overlay" id="modal" hidden></div>
 <div class="overlay" id="confirm" hidden></div>
-<div class="page" id="settings" hidden></div>
+<div class="settings-overlay" id="settings" hidden></div>
 </div>
 
 <script>// 日期工具：日程只精确到天，统一用 'YYYY-MM-DD' 字符串。主进程和页面共用这一份。
@@ -793,7 +846,7 @@ function refreshBlock() {
   const el = document.activeElement;
   const typing = !!el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
   rc.setBlock(!!App.sel || TaskDialog.isOpen() || Settings.isOpen() || typing);
-  shell.classList.toggle('editing', (TaskDialog.isOpen() && !TaskDialog.confirmOpen()) || Settings.isOpen());
+  shell.classList.toggle('editing', TaskDialog.isOpen() && !TaskDialog.confirmOpen());
   shell.classList.toggle('settings-open', Settings.isOpen());
 }
 document.addEventListener('focusin', refreshBlock);
@@ -1051,7 +1104,7 @@ function goToday() {
 // 直接新建默认今天；查看其他月份时默认该月 1 日，日期仍可修改。
 function newTask() {
   if (TaskDialog.isOpen() || !App.state) return;
-  Settings.close();
+  Settings.close({ animate: false, restoreFocus: false });
   clearSelection();
   select(null);
   const today = D.parse(App.state.today), { y, m } = App.view;
@@ -1210,7 +1263,7 @@ document.addEventListener('keydown', e => {
 rc.onCommand(cmd => {
   if (cmd.type === 'new') newTask();
   else if (cmd.type === 'settings') Settings.open();
-  else if (cmd.type === 'discard') { TaskDialog.discard(); clearSelection(); }
+  else if (cmd.type === 'discard') { TaskDialog.discard(); Settings.close({ animate: false, restoreFocus: false }); clearSelection(); }
 });
 
 rc.onState(s => { App.state = s; render(); if (Settings.isOpen()) Settings.render(); });
@@ -1499,73 +1552,121 @@ const TaskDialog = (() => {
   };
 })();
 </script>
-<script>// 设置页：桌面挂件外观（拖动时实时预览，松手后保存并提示）、挂件位置、统一提醒选项、开机自启
+<script>// 设置以主面板内的磨砂浮窗显示；所有设置仍沿用原有保存与桌面预览通路。
 const Settings = (() => {
   const page = $('settings');
   const q = id => document.getElementById(id);
-  let isOpenFlag = false;
+  let isOpenFlag = false, closing = false, closeTimer = null;
   let editingAppearance = false, appearanceRevision = 0;
-
+  let layoutObserver = null, layoutFrame = 0, backdropPressed = false;
+  let previousFocus = null;
   const A = RCDesktopAppearance;
   const DEFAULT_AP = A.DEFAULT;
   const SLIDERS = [
     ['panelOpacity', '玻璃不透明度', ...A.LIMITS.panelOpacity, v => `${v}%`],
     ['width', '挂件宽度', ...A.LIMITS.width, v => `${v}px`],
     ['dateFontSize', '日期字号', ...A.LIMITS.dateFontSize, v => `${v}px`],
-    ['barFontSize', '甘特条字号', ...A.LIMITS.barFontSize, v => `${v}px`],
-    ['barHeight', '甘特条高度', ...A.LIMITS.barHeight, v => `${v}px`],
+    ['blur', '磨砂强度', ...A.LIMITS.blur, v => v === 0 ? '关闭' : String(v)],
+    ['barFontSize', '日程条字号', ...A.LIMITS.barFontSize, v => `${v}px`],
+    ['barHeight', '日程条高度', ...A.LIMITS.barHeight, v => `${v}px`],
   ];
-  const sliderRows = rows => rows.map(([k, name, min, max, step]) => `<div class="srow"><label for="st_${k}">${name}</label>`
-    + `<input type="range" id="st_${k}" min="${min}" max="${max}" step="${step}"><output id="st_${k}_out" for="st_${k}"></output></div>`).join('');
+  const sliderRows = rows => rows.map(([k, name, min, max, step]) => `<div class="settings-control">
+    <div class="control-heading"><span class="control-label"><label for="st_${k}">${name}</label>${k === 'blur' ? `<button type="button" class="settings-help" id="stGlassWarn" aria-label="磨砂说明"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.3"/><path d="M7.9 7.5a2.15 2.15 0 0 1 4.2.6c0 1.5-2.1 1.7-2.1 3.2"/><path d="M10 14h.01"/></svg></button>` : ''}</span><output id="st_${k}_out" for="st_${k}"></output></div>
+    <input type="range" id="st_${k}" min="${min}" max="${max}" step="${step}"></div>`).join('');
   const state = () => W2App.App.state;
 
   function build() {
     page.innerHTML = `
-      <div class="page-head"><button type="button" class="ghost" id="stBack">‹ 返回</button><h2>设置</h2></div>
-      <div class="group"><h3>桌面挂件外观</h3>
-        ${sliderRows(SLIDERS.slice(0, 3))}
-        <div class="srow"><label for="st_blur">磨砂效果</label><select id="st_blur">${A.GLASS_LEVELS.map(item => `<option value="${item.value}">${item.label}</option>`).join('')}</select><span></span></div>
-        <div class="warn" id="stGlassWarn" hidden>这一版桌面挂件暂未接入磨砂，当前使用透明底板；你的磨砂设置会保留</div>
-        <div class="srow"><label for="st_panelColor">玻璃底色</label><input type="color" id="st_panelColor"><span></span></div>
-        <div class="srow"><label for="st_textColor">文字颜色</label><input type="color" id="st_textColor"><span></span></div>
-        ${sliderRows(SLIDERS.slice(3))}
-        <div class="warn" id="stBarWarn" hidden>条高太小，文字可能被裁切</div>
-        <div class="btn-row"><button type="button" class="plain-btn" id="stReset">恢复默认</button></div>
-      </div>
-      <div class="group"><h3>桌面挂件位置</h3>
-        <div class="hint" id="stW1State"></div>
-        <div class="btn-row"><button type="button" class="plain-btn" id="stPin"></button>
-          <button type="button" class="plain-btn" id="stResetPos">重置位置</button></div>
-      </div>
-      <div class="group"><h3>提醒（统一设置）</h3>
-        <div class="hint">新建日程默认沿用这里的设置，也可以在日程里单独改。只按天提醒，不设具体几点。</div>
-        <div class="remind-grid" style="padding-left:0">
-          <label class="check"><input type="checkbox" id="gSB"> 开始前 <input type="number" id="gSBd" min="1" max="365"> 天</label>
-          <label class="check"><input type="checkbox" id="gSD"> 开始当天</label>
-          <label class="check"><input type="checkbox" id="gEB"> 结束前 <input type="number" id="gEBd" min="1" max="365"> 天</label>
-          <label class="check"><input type="checkbox" id="gED"> 结束当天</label>
+      <section class="settings-sheet" role="dialog" aria-modal="true" aria-labelledby="stHeading">
+        <header class="settings-header"><h2 id="stHeading">设置</h2>
+          <button type="button" class="icon" id="stBack" aria-label="关闭设置" title="关闭设置"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M7 17 17 7"/></svg></button></header>
+        <nav class="settings-tabs" role="tablist" aria-label="设置分类">
+          <button type="button" role="tab" id="stTabAppearance" data-tab="Appearance" aria-controls="stPanelAppearance" aria-selected="true">外观</button>
+          <button type="button" role="tab" id="stTabReminder" data-tab="Reminder" aria-controls="stPanelReminder" aria-selected="false" tabindex="-1">提醒</button>
+          <button type="button" role="tab" id="stTabGeneral" data-tab="General" aria-controls="stPanelGeneral" aria-selected="false" tabindex="-1">通用</button>
+        </nav>
+        <div class="settings-scroll">
+          <div class="settings-panel" id="stPanelAppearance" role="tabpanel" aria-labelledby="stTabAppearance">
+            <div class="settings-grid">${sliderRows(SLIDERS.slice(0, 2))}</div>
+            <div class="settings-grid settings-colors">
+              <label class="settings-color" for="st_panelColor"><span>玻璃底色</span><input type="color" id="st_panelColor"></label>
+              <label class="settings-color" for="st_textColor"><span>文字颜色</span><input type="color" id="st_textColor"></label>
+            </div>
+            <div class="settings-grid">${sliderRows(SLIDERS.slice(2, 4))}</div>
+            <div class="settings-grid">${sliderRows(SLIDERS.slice(4))}</div>
+            <p class="settings-notice" id="stBarWarn" hidden>条高太小，文字可能被裁切。</p>
+          </div>
+          <div class="settings-panel" id="stPanelReminder" role="tabpanel" aria-labelledby="stTabReminder" hidden>
+            <p class="settings-intro">新建日程默认使用这些提醒，也可以在每个日程里单独调整。</p>
+            <section class="settings-card"><h3>开始提醒</h3>
+              <div class="reminder-option"><label for="gSB">开始前</label><span class="reminder-days"><input type="number" id="gSBd" aria-label="开始前几天提醒" min="1" max="365">天</span><input class="settings-switch" type="checkbox" role="switch" id="gSB"></div>
+              <div class="reminder-option"><label for="gSD">开始当天</label><input class="settings-switch" type="checkbox" role="switch" id="gSD"></div>
+            </section>
+            <section class="settings-card"><h3>结束提醒</h3>
+              <div class="reminder-option"><label for="gEB">结束前</label><span class="reminder-days"><input type="number" id="gEBd" aria-label="结束前几天提醒" min="1" max="365">天</span><input class="settings-switch" type="checkbox" role="switch" id="gEB"></div>
+              <div class="reminder-option"><label for="gED">结束当天</label><input class="settings-switch" type="checkbox" role="switch" id="gED"></div>
+            </section>
+          </div>
+          <div class="settings-panel" id="stPanelGeneral" role="tabpanel" aria-labelledby="stTabGeneral" hidden>
+            <section class="settings-card"><h3>桌面挂件</h3><p class="settings-intro" id="stW1State"></p>
+              <div class="settings-actions"><button type="button" class="settings-action" id="stPin"></button><button type="button" class="settings-action" id="stResetPos">重置位置</button></div>
+            </section>
+            <section class="settings-card"><label class="settings-toggle-row" for="stAuto"><span>开机自启</span><input class="settings-switch" type="checkbox" role="switch" id="stAuto"></label><p class="settings-intro">开机时自动打开小鱼。</p></section>
+            <div class="settings-about"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>小鱼日程表 <small>0.1.0</small><br><small>日程只保存在这台电脑上</small></span></div>
+          </div>
         </div>
-      </div>
-      <div class="group"><h3>通用</h3>
-        <label class="check"><input type="checkbox" id="stAuto"> 开机自启</label>
-        <div class="hint">Demo 里默认关闭；打开后会写入 Windows 的开机启动项。</div>
-      </div>
-      <div class="group"><h3>关于</h3><div class="hint">日程挂件 Demo 0.1.0 · 数据只保存在本机</div></div>`;
+        <footer class="settings-footer"><span>修改后自动保存</span><button type="button" class="settings-reset" id="stReset">恢复默认外观</button></footer>
+      </section>`;
     wire();
     render();
   }
 
-  // 从控件读出当前外观（拖动中还没保存的值）
+  function measure() {
+    if (!isOpenFlag || closing) return;
+    const overlayStyle = getComputedStyle(page), scrollStyle = getComputedStyle(page.querySelector('.settings-scroll'));
+    const height = [...page.querySelectorAll('.settings-header, .settings-tabs, .settings-panel:not([hidden]), .settings-footer')]
+      .reduce((sum, el) => {
+        const style = getComputedStyle(el);
+        // 浮窗出现时有缩放动画，取布局高度，避免用动画中的尺寸挤出滚动条。
+        return sum + el.offsetHeight + parseFloat(style.marginTop) + parseFloat(style.marginBottom);
+      }, 4) + parseFloat(overlayStyle.paddingTop) + parseFloat(overlayStyle.paddingBottom)
+      + parseFloat(scrollStyle.paddingTop) + parseFloat(scrollStyle.paddingBottom);
+    $('appShell').style.setProperty('--settings-height', `${Math.ceil(height)}px`);
+  }
+
+  function queueMeasure() {
+    if (layoutFrame) return;
+    layoutFrame = requestAnimationFrame(() => { layoutFrame = 0; measure(); });
+  }
+
+  function selectTab(name, focus = false) {
+    page.querySelectorAll('[role=tab]').forEach(tab => {
+      const selected = tab.dataset.tab === name;
+      tab.setAttribute('aria-selected', String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+      q(`stPanel${tab.dataset.tab}`).hidden = !selected;
+      if (selected && focus) tab.focus();
+    });
+    q('stReset').hidden = name !== 'Appearance';
+    page.querySelector('.settings-scroll').scrollTop = 0;
+    queueMeasure();
+  }
+
+  // 读取全部外观字段，切换分类不会丢失当前值。
   function current() {
-    const ap = { panelColor: q('st_panelColor').value.toUpperCase(), textColor: q('st_textColor').value.toUpperCase(), blur: +q('st_blur').value };
+    const ap = { panelColor: q('st_panelColor').value.toUpperCase(), textColor: q('st_textColor').value.toUpperCase() };
     for (const [k] of SLIDERS) ap[k] = +q(`st_${k}`).value;
     return ap;
   }
 
   function updateHints(ap) {
     for (const [k, , , , , fmt] of SLIDERS) q(`st_${k}_out`).textContent = fmt(ap[k]);
-    q('stGlassWarn').hidden = ap.blur === 0 || state().w1.glass?.available !== false;
+    const glassHelp = state().w1.glass?.available === false
+      ? '桌面磨砂尚未启用，选择的效果会保留。' : '拖动调整磨砂强度，0 为关闭。';
+    q('stGlassWarn').title = glassHelp;
+    q('stGlassWarn').setAttribute('aria-label', `磨砂说明：${glassHelp}`);
     q('stBarWarn').hidden = ap.barHeight >= ap.barFontSize + 2;
+    queueMeasure();
   }
 
   async function saveAp(patch, msg) {
@@ -1574,7 +1675,6 @@ const Settings = (() => {
     let res;
     try { res = await rc.saveSettings({ w1: { appearance: patch } }); }
     catch (_) { res = { ok: false }; }
-    // 新一轮拖动已经开始时，不用上一轮保存的回调覆盖当前预览。
     if (revision === appearanceRevision) {
       rc.previewAppearance(null);
       render();
@@ -1583,9 +1683,24 @@ const Settings = (() => {
     return res;
   }
 
+  async function saveAction(action, message) {
+    let result;
+    try { result = await action(); } catch (_) { result = { ok: false }; }
+    render();
+    W2App.report(result, message);
+  }
+
   function wire() {
-    q('stBack').addEventListener('click', close);
-    for (const key of ['panelColor', 'textColor', 'blur', ...SLIDERS.map(s => s[0])]) {
+    q('stBack').addEventListener('click', () => close());
+    const tabs = [...page.querySelectorAll('[role=tab]')];
+    tabs.forEach((tab, index) => {
+      tab.addEventListener('click', () => selectTab(tab.dataset.tab));
+      tab.addEventListener('keydown', event => {
+        const next = event.key === 'ArrowRight' ? (index + 1) % tabs.length : event.key === 'ArrowLeft' ? (index + tabs.length - 1) % tabs.length : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : null;
+        if (next !== null) { event.preventDefault(); selectTab(tabs[next].dataset.tab, true); }
+      });
+    });
+    for (const key of ['panelColor', 'textColor', ...SLIDERS.map(s => s[0])]) {
       const el = q(`st_${key}`);
       el.addEventListener('input', () => {
         editingAppearance = true;
@@ -1594,65 +1709,119 @@ const Settings = (() => {
         updateHints(ap);
         rc.previewAppearance(ap);
       });
-      el.addEventListener('change', () => { const ap = current(); saveAp({ [key]: ap[key] }); });   // 松手 / 选完颜色后才保存
+      el.addEventListener('change', () => { const ap = current(); saveAp({ [key]: ap[key] }); });
     }
     q('stReset').addEventListener('click', () => saveAp(DEFAULT_AP, '已恢复默认外观'));
-    q('stPin').addEventListener('click', async () => {
+    q('stPin').addEventListener('click', () => {
       const pinned = state().w1.pinned;
-      W2App.report(await rc.setPinned(!pinned), pinned ? '已解锁，可以拖动挂件了' : '已钉住');
+      saveAction(() => rc.setPinned(!pinned), pinned ? '已解锁，可以拖动挂件了' : '已钉住');
     });
-    q('stResetPos').addEventListener('click', async () => W2App.report(await rc.resetW1(), '已移回主显示器右上角'));
+    q('stResetPos').addEventListener('click', () => saveAction(() => rc.resetW1(), '已移回主显示器右上角'));
     for (const id of ['gSB', 'gSBd', 'gSD', 'gEB', 'gEBd', 'gED']) q(id).addEventListener('change', saveReminder);
-    q('stAuto').addEventListener('change', async e => W2App.report(await rc.setAutoStart(e.target.checked), e.target.checked ? '已开启开机自启' : '已关闭开机自启'));
+    q('stAuto').addEventListener('change', event => {
+      const on = event.target.checked;
+      saveAction(() => rc.setAutoStart(on), on ? '已开启开机自启' : '已关闭开机自启');
+    });
   }
 
-  async function saveReminder() {
+  function saveReminder() {
+    const days = id => Math.min(365, Math.max(1, Math.round(+q(id).value || 1)));
     const reminder = {
-      startBefore: { on: q('gSB').checked, days: Math.max(1, +q('gSBd').value || 1) }, startDay: q('gSD').checked,
-      endBefore: { on: q('gEB').checked, days: Math.max(1, +q('gEBd').value || 1) }, endDay: q('gED').checked,
+      startBefore: { on: q('gSB').checked, days: days('gSBd') }, startDay: q('gSD').checked,
+      endBefore: { on: q('gEB').checked, days: days('gEBd') }, endDay: q('gED').checked,
     };
-    W2App.report(await rc.saveSettings({ reminder }), '已保存');
+    q('gSBd').disabled = !reminder.startBefore.on;
+    q('gEBd').disabled = !reminder.endBefore.on;
+    return saveAction(() => rc.saveSettings({ reminder }), '已保存');
   }
 
-  // 用最新数据刷新控件（保存成功后主进程会推新数据过来）
   function render() {
-    if (!isOpenFlag || !page.firstChild) return;
+    if (!isOpenFlag || closing || !page.firstChild) return;
     const s = state(), ap = A.normalize(s.settings.w1.appearance), w1 = s.w1;
     if (!editingAppearance) {
       q('st_panelColor').value = ap.panelColor.toLowerCase();
       q('st_textColor').value = ap.textColor.toLowerCase();
-      q('st_blur').value = String(A.glassLevel(ap.blur));
       for (const [k] of SLIDERS) q(`st_${k}`).value = ap[k];
     }
     updateHints(editingAppearance ? current() : ap);
-    q('stW1State').textContent = !w1.pinned ? '摆放中：可以拖动桌面挂件，摆好后点「钉住」'
-      : w1.degraded ? '桌面挂靠失败，已切换为置底显示' : '已钉住在桌面上';
-    q('stPin').textContent = w1.pinned ? '解锁桌面挂件' : '钉住桌面挂件';
+    q('stW1State').textContent = !w1.pinned ? '已解锁，可以拖动挂件调整位置。'
+      : w1.degraded ? '暂时无法钉到桌面，当前置于窗口底层。' : '已钉住在桌面上。';
+    q('stPin').textContent = w1.pinned ? '解锁摆放' : '钉在桌面';
     const r = s.settings.reminder;
     q('gSB').checked = r.startBefore.on; q('gSBd').value = r.startBefore.days; q('gSD').checked = r.startDay;
     q('gEB').checked = r.endBefore.on; q('gEBd').value = r.endBefore.days; q('gED').checked = r.endDay;
+    q('gSBd').disabled = !r.startBefore.on; q('gEBd').disabled = !r.endBefore.on;
     q('stAuto').checked = !!s.settings.general.autoStart;
   }
 
+  function backgroundInert(value) {
+    document.querySelectorAll('#appShell > .top, #appShell > .workspace').forEach(el => { el.inert = value; });
+  }
+
   function open() {
-    if (isOpenFlag) return;
+    if (!state() || TaskDialog.isOpen()) return;
+    if (isOpenFlag && !closing) return;
+    if (closing) finishClose(false);
+    previousFocus = document.activeElement;
     W2App.clearSelection();
+    W2App.select(null);
     isOpenFlag = true;
     page.hidden = false;
+    page.classList.remove('is-closing');
     build();
+    backgroundInert(true);
+    layoutObserver = new ResizeObserver(queueMeasure);
+    page.querySelectorAll('.settings-header, .settings-tabs, .settings-panel, .settings-footer').forEach(el => layoutObserver.observe(el));
+    measure();
+    W2App.refreshBlock();
+    q('stBack').focus({ preventScroll: true });
+  }
+
+  function finishClose(restoreFocus) {
+    clearTimeout(closeTimer);
+    closeTimer = null;
+    isOpenFlag = closing = false;
+    layoutObserver?.disconnect();
+    layoutObserver = null;
+    cancelAnimationFrame(layoutFrame);
+    layoutFrame = 0;
+    page.hidden = true;
+    page.classList.remove('is-closing');
+    page.innerHTML = '';
+    $('appShell').style.removeProperty('--settings-height');
+    backgroundInert(false);
+    if (restoreFocus) (previousFocus?.isConnected ? previousFocus : $('settingsBtn')).focus({ preventScroll: true });
     W2App.refreshBlock();
   }
 
-  function close() {
+  function close({ animate = true, restoreFocus = true } = {}) {
     if (!isOpenFlag) return;
-    isOpenFlag = false;
+    if (closing && animate) return;
+    closing = true;
+    backdropPressed = false;
     editingAppearance = false;
     appearanceRevision++;
-    page.hidden = true;
-    page.innerHTML = '';
-    rc.previewAppearance(null);   // 丢掉没保存的预览
-    W2App.refreshBlock();
+    rc.previewAppearance(null);
+    if (!animate || matchMedia('(prefers-reduced-motion: reduce)').matches) { finishClose(restoreFocus); return; }
+    page.classList.add('is-closing');
+    closeTimer = setTimeout(() => finishClose(restoreFocus), 150);
   }
+
+  // 只有在外侧空白按下、再在空白释放才关闭；拖动滑块后在外侧松手不误关。
+  page.addEventListener('pointerdown', event => { backdropPressed = event.button === 0 && event.target === page; });
+  page.addEventListener('pointercancel', () => { backdropPressed = false; });
+  page.addEventListener('click', event => {
+    if (event.target === page && backdropPressed) close();
+    backdropPressed = false;
+  });
+  page.addEventListener('keydown', event => {
+    if (event.key !== 'Tab') return;
+    const items = [...page.querySelectorAll('button, input, select, summary, [tabindex]')]
+      .filter(el => !el.disabled && el.tabIndex >= 0 && el.getClientRects().length);
+    const first = items[0], last = items.at(-1);
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+  });
 
   return { open, close, render, isOpen: () => isOpenFlag };
 })();

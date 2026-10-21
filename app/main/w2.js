@@ -1,14 +1,13 @@
 // W2 下拉窗：不透明、可拖。拖到屏幕顶 / 左 / 右边缘 20px 内松开就吸附；
-// 吸附后鼠标离开 500ms 收起，只在边缘露出 3px，鼠标碰到就滑出。底边和两块屏幕相接的边不吸附。
+// 吸附后鼠标离开约 100ms 收起，只在边缘露出 3px，鼠标碰到就滑出。底边和两块屏幕相接的边不吸附。
 const { BrowserWindow, screen } = require('electron');
 const path = require('path');
 const W = require('./win32');
 const P = require('./paths');
 
-const SNAP = 20, STRIP = 3, LEAVE_MS = 500;
+const SNAP = 20, STRIP = 3, LEAVE_MS = 100, POLL_MS = 32;
 const MIN_HEIGHT = 160;
-const easeOut = k => 1 - Math.pow(1 - k, 3);   // 滑出：先快后慢
-const easeIn = k => k * k * k;                 // 收起：先慢后快
+const easeOut = k => 1 - Math.pow(1 - k, 3);   // 立即起步，到边缘时柔和停下
 
 class W2 {
   constructor(store) {
@@ -20,6 +19,7 @@ class W2 {
     this.blocked = false;     // 页面告诉我们：新建中 / 有弹窗 / 在设置页 / 输入框有焦点，这时不自动收起
     this.dragging = false;
     this.anim = null;
+    this.autoCollapsing = false;
     this.leaveSince = 0;
     this.quitting = false;
     this.contentHeight = null;
@@ -56,7 +56,7 @@ class W2 {
       this.resizeToContent();
       this.saveBounds();
     });
-    this.pollTimer = setInterval(() => this.poll(), 100);
+    this.pollTimer = setInterval(() => this.poll(), POLL_MS);
   }
 
   send(channel, data) {
@@ -152,39 +152,52 @@ class W2 {
 
   animate(target, ms, ease) {
     clearInterval(this.anim);
-    const from = this.win.getBounds(), t0 = Date.now();
+    this.anim = null;
+    const from = this.win.getBounds(), t0 = performance.now();
+    const distance = Math.max(Math.abs(target.x - from.x), Math.abs(target.y - from.y));
+    const travel = (this.dock === 'top' ? from.height : from.width) - STRIP;
+    const duration = Math.max(70, ms * Math.min(1, distance / Math.max(1, travel)));
+    if (!distance) { this.autoCollapsing = false; this.resizeToContent(); return; }
     this.anim = setInterval(() => {
-      const k = Math.min(1, (Date.now() - t0) / ms), e = ease(k);
+      const k = Math.min(1, (performance.now() - t0) / duration), e = ease(k);
       this.setBounds({
         x: Math.round(from.x + (target.x - from.x) * e), y: Math.round(from.y + (target.y - from.y) * e),
         width: from.width, height: from.height,
       });
-      if (k >= 1) { clearInterval(this.anim); this.anim = null; this.resizeToContent(); }
-    }, 10);
+      if (k >= 1) { clearInterval(this.anim); this.anim = null; this.autoCollapsing = false; this.resizeToContent(); }
+    }, 16);
   }
 
-  collapse() {
+  collapse(automatic = false) {
     if (!this.dock || this.collapsed) return;
     this.collapsed = true;
+    this.autoCollapsing = automatic;
     this.leaveSince = 0;
-    this.animate(this.dockBounds(true), 150, easeIn);
+    this.animate(this.dockBounds(true), 160, easeOut);
   }
 
   expand() {
     if (!this.dock || !this.collapsed) return;
     this.collapsed = false;
+    this.autoCollapsing = false;
+    this.leaveSince = 0;
     if (!this.win.isVisible()) this.win.showInactive();
     this.animate(this.dockBounds(false), 180, easeOut);
   }
 
   poll() {
-    if (!this.win || !this.dock || this.anim || this.dragging) return;
+    if (!this.win || this.win.isDestroyed() || !this.win.isVisible() || !this.dock || this.dragging) return;
     const c = screen.getCursorScreenPoint(), b = this.win.getBounds();
     const inside = c.x >= b.x && c.x < b.x + b.width && c.y >= b.y && c.y < b.y + b.height;
+    // 自动收起时允许鼠标返回打断；手动点关闭不因鼠标仍在原位置而反向展开。
+    if (this.anim) {
+      if (this.autoCollapsing && (inside || this.blocked)) this.expand();
+      return;
+    }
     if (this.collapsed) { if (inside && this.win.isVisible()) this.expand(); return; }
     if (inside || this.blocked || W.leftButtonDown()) { this.leaveSince = 0; return; }
     if (!this.leaveSince) this.leaveSince = Date.now();
-    else if (Date.now() - this.leaveSince >= LEAVE_MS) this.collapse();
+    else if (Date.now() - this.leaveSince >= LEAVE_MS) this.collapse(true);
   }
 
   // 用户拖完窗口：靠近外侧边缘就吸附，拖离边缘就取消吸附

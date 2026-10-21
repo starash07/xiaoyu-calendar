@@ -16,7 +16,7 @@ async function run({ store, w2, broadcast, note, shot }) {
   const layout = () => js(`(() => {
     const rect = id => { const r = document.getElementById(id).getBoundingClientRect(); return { top: r.top, bottom: r.bottom, height: r.height }; };
     return { shell: rect('appShell'), calendar: rect('cal'), detail: rect('detailSection'),
-      buttons: document.querySelector('.bottom-bar').getBoundingClientRect().bottom,
+      buttons: document.querySelector('.calendar-toolbar').getBoundingClientRect().bottom,
       shown: document.getElementById('detailSection').classList.contains('show'),
       contentHeight: document.querySelector('.content').clientHeight,
       contentScroll: document.querySelector('.content').scrollHeight };

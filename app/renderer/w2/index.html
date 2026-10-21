@@ -12,7 +12,6 @@
 <header class="top">
   <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
   <span class="brand">小鱼日程表</span>
-  <span class="brand-note">把日子安排好</span>
   <span class="spacer"></span>
   <button class="icon settings-button" id="settingsBtn" type="button" title="设置" aria-label="设置"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10m4 0h2M4 17h2m4 0h10M14 4v6M6 14v6"/></svg></button>
   <button class="icon" id="closeBtn" type="button" title="收起窗口" aria-label="收起窗口"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M7 17 17 7"/></svg></button>
@@ -20,6 +19,16 @@
 
 <main class="workspace">
   <section class="calendar-panel" aria-label="月历">
+    <section class="calendar-toolbar" aria-label="月份和快捷操作">
+      <div class="month-pill">
+        <button class="month-step" id="prevBtn" type="button" title="上一月（PageUp）" aria-label="上一月"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button>
+        <span class="month-label" id="monthLabel"></span>
+        <button class="month-step" id="nextBtn" type="button" title="下一月（PageDown）" aria-label="下一月"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button>
+      </div>
+      <button class="today-button" id="todayBtn" type="button">回到今天</button>
+      <button class="new-button" id="newBtn" type="button" title="新建日程（Ctrl+N）"><span aria-hidden="true">＋</span>新建日程</button>
+    </section>
+
     <div class="content">
       <section class="reminder-section" id="reminderSection" hidden aria-label="待确认提醒">
         <div class="reminder-head"><b id="reminderHead"></b></div>
@@ -30,16 +39,6 @@
         <div class="empty" id="empty" hidden>这个月还是空白的。<button id="emptyNewBtn" type="button">记下第一件事</button></div>
       </div>
     </div>
-
-    <section class="bottom-bar" aria-label="月份和快捷操作">
-      <div class="month-pill">
-        <button class="month-step" id="prevBtn" type="button" title="上一月（PageUp）" aria-label="上一月"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button>
-        <span class="month-label" id="monthLabel"></span>
-        <button class="month-step" id="nextBtn" type="button" title="下一月（PageDown）" aria-label="下一月"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button>
-      </div>
-      <button class="today-button" id="todayBtn" type="button">回到今天</button>
-      <button class="new-button" id="newBtn" type="button" title="新建日程（Ctrl+N）"><span aria-hidden="true">＋</span>新建日程</button>
-    </section>
 
     <section class="detail-section" id="detailSection" aria-label="日程详情" aria-hidden="true">
       <div class="detail-card" id="detail" hidden></div>
@@ -53,7 +52,7 @@
 <div class="toast" id="toast" hidden></div>
 <div class="overlay" id="modal" hidden></div>
 <div class="overlay" id="confirm" hidden></div>
-<div class="page" id="settings" hidden></div>
+<div class="settings-overlay" id="settings" hidden></div>
 </div>
 
 <script src="../shared/dates.js"></script>

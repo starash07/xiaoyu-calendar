@@ -69,7 +69,7 @@ function refreshBlock() {
   const el = document.activeElement;
   const typing = !!el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
   rc.setBlock(!!App.sel || TaskDialog.isOpen() || Settings.isOpen() || typing);
-  shell.classList.toggle('editing', (TaskDialog.isOpen() && !TaskDialog.confirmOpen()) || Settings.isOpen());
+  shell.classList.toggle('editing', TaskDialog.isOpen() && !TaskDialog.confirmOpen());
   shell.classList.toggle('settings-open', Settings.isOpen());
 }
 document.addEventListener('focusin', refreshBlock);
@@ -327,7 +327,7 @@ function goToday() {
 // 直接新建默认今天；查看其他月份时默认该月 1 日，日期仍可修改。
 function newTask() {
   if (TaskDialog.isOpen() || !App.state) return;
-  Settings.close();
+  Settings.close({ animate: false, restoreFocus: false });
   clearSelection();
   select(null);
   const today = D.parse(App.state.today), { y, m } = App.view;
@@ -486,7 +486,7 @@ document.addEventListener('keydown', e => {
 rc.onCommand(cmd => {
   if (cmd.type === 'new') newTask();
   else if (cmd.type === 'settings') Settings.open();
-  else if (cmd.type === 'discard') { TaskDialog.discard(); clearSelection(); }
+  else if (cmd.type === 'discard') { TaskDialog.discard(); Settings.close({ animate: false, restoreFocus: false }); clearSelection(); }
 });
 
 rc.onState(s => { App.state = s; render(); if (Settings.isOpen()) Settings.render(); });
