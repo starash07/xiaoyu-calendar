@@ -9,7 +9,7 @@ let info = null;       // 窗口位置、是否钉住
 let preview = null;    // 设置页拖滑块时的临时外观
 let hoverId = null;
 let calendarKey = '', detailKey = '', hideTimer = null;
-let sizeFrame = 0, lastSize = '', calendarWidth = 0;
+let sizeFrame = 0, lastSize = '', calendarWidth = 0, calendarSizeFrame = 0;
 let cursor = { x: -1, y: -1 };
 
 const appearance = () => A.normalize({ ...state?.settings.w1.appearance, ...(preview || {}) });
@@ -22,6 +22,8 @@ function applyAppearance() {
   panel.style.setProperty('--fg', ap.textColor);
   panel.style.setProperty('--fg2', C.rgba(ap.textColor, .72));
   panel.style.setProperty('--fg3', C.rgba(ap.textColor, .32));
+  panel.style.setProperty('--weekend', ap.weekendColor);
+  panel.style.setProperty('--weekend-out', C.rgba(ap.weekendColor, .55));
   panel.style.setProperty('--rule', C.rgba(ap.textColor, .10));
   panel.style.setProperty('--detail-rule', C.rgba(ap.textColor, .14));
 }
@@ -120,10 +122,14 @@ function reportSize() {
 }
 new ResizeObserver(reportSize).observe(panel);
 new ResizeObserver(() => {
-  if (cal.clientWidth === calendarWidth) return;
-  calendarWidth = cal.clientWidth;
-  panel.style.setProperty('--week-height', `${Math.max(54, Math.round(calendarWidth * .135))}px`);
-  if (state) hitTest(cursor.x, cursor.y);
+  if (calendarSizeFrame) return;
+  calendarSizeFrame = requestAnimationFrame(() => {
+    calendarSizeFrame = 0;
+    if (cal.clientWidth === calendarWidth) return;
+    calendarWidth = cal.clientWidth;
+    panel.style.setProperty('--week-height', `${Math.max(54, Math.round(calendarWidth * .135))}px`);
+    if (state) hitTest(cursor.x, cursor.y);
+  });
 }).observe(cal);
 
 rc.onState(s => { state = s; render(); });

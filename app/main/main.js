@@ -1,4 +1,4 @@
-// 入口：单实例、运行数据锁在项目目录里、创建两个窗口和托盘、每天 0 点刷新提醒
+// 入口：单实例、本地数据、桌面与主面板窗口、独立设置浮窗和托盘。
 const { app, ipcMain, powerMonitor, screen } = require('electron');
 const P = require('./paths');
 if (P.SELFTEST) require('./selftest-runtime').install();
@@ -24,6 +24,8 @@ function start() {
   const { Store } = require('./store');
   const { W1 } = require('./w1');
   const { W2 } = require('./w2');
+  const { SettingsWindow } = require('./settings-window');
+  const { applyAppearancePreview } = require('./appearance-preview');
   const { createTray } = require('./tray');
   const D = require('../renderer/shared/dates');
 
@@ -33,6 +35,9 @@ function start() {
 
   const w1 = new W1(store, { balloon: msg => tray && tray.balloon(msg), onChange: () => broadcast() });
   const w2 = new W2(store);
+  const previewAppearance = value => applyAppearancePreview(w1, w2, value);
+  const settingsWindow = new SettingsWindow(w2, { onClose: () => previewAppearance(null) });
+  w2.onHide = () => settingsWindow.close();
 
   const state = () => ({
     ...store.snapshot(),
@@ -43,6 +48,7 @@ function start() {
     const s = state();
     w1.send('state', s);
     w2.send('state', s);
+    settingsWindow.send('state', s);
     if (tray) tray.refresh();
   };
   store.onChange(broadcast);
@@ -89,14 +95,21 @@ function start() {
   ipcMain.on('w2:drag', () => w2.dragStart());
   ipcMain.on('w2:ready', e => { if (e.sender === w2.win.webContents) w2.updateLayoutLimit(true); });
   ipcMain.on('w2:height', (e, height) => { if (e.sender === w2.win.webContents) w2.resizeToContent(height); });
-  ipcMain.on('w2:block', (e, blocked) => { w2.blocked = !!blocked; });
+  ipcMain.on('w2:block', (e, blocked) => { if (e.sender === w2.win.webContents) w2.blocked = !!blocked; });
   ipcMain.on('w2:hide', () => w2.hide());
+  ipcMain.handle('settings:open', e => e.sender === w2.win.webContents ? settingsWindow.open() : { ok: false });
+  ipcMain.on('settings:ready', e => settingsWindow.markReady(e.sender));
+  ipcMain.on('settings:close', e => {
+    if (settingsWindow.owns(e.sender) || e.sender === w2.win.webContents) settingsWindow.close();
+  });
   ipcMain.handle('task:create', (e, t) => store.createTask(t));
   ipcMain.handle('task:update', (e, id, patch) => store.updateTask(id, patch));
   ipcMain.handle('task:delete', (e, id) => store.deleteTask(id));
   ipcMain.handle('reminder:confirm', (e, id) => store.confirmReminder(id));
   ipcMain.handle('settings:save', (e, patch) => store.saveSettings(patch));
-  ipcMain.on('appearance:preview', (e, ap) => { w1.previewAppearance(ap); broadcast(); });
+  ipcMain.on('appearance:preview', (e, ap) => {
+    if (settingsWindow.owns(e.sender)) previewAppearance(ap);
+  });
   ipcMain.handle('autostart:set', (e, on) => setAutoStart(!!on));
 
   // —— 提醒：每次启动检查一遍；每天 0 点刷新；睡眠唤醒后补做；每分钟兜底检查日期有没有变 ——
@@ -113,13 +126,13 @@ function start() {
   setInterval(check, 60 * 1000);
 
   // —— 屏幕变化：挂件跑到屏幕外就移回主显示器 ——
-  screen.on('display-removed', () => { w1.ensureOnScreen(true); w2.updateLayoutLimit(true); });
-  screen.on('display-metrics-changed', () => { w1.ensureOnScreen(true); w1.place(); w1.sendInfo(); w2.updateLayoutLimit(true); });
-  screen.on('display-added', () => { w1.sendInfo(); w2.updateLayoutLimit(true); });
+  screen.on('display-removed', () => { w1.ensureOnScreen(true); w2.updateLayoutLimit(true); settingsWindow.updateDisplay(); });
+  screen.on('display-metrics-changed', () => { w1.ensureOnScreen(true); w1.place(); w1.sendInfo(); w2.updateLayoutLimit(true); settingsWindow.updateDisplay(); });
+  screen.on('display-added', () => { w1.sendInfo(); w2.updateLayoutLimit(true); settingsWindow.updateDisplay(); });
 
   app.on('second-instance', () => w2.show());   // 重复启动：唤出已经在运行的下拉窗
   app.on('window-all-closed', () => { /* 常驻托盘，不因为窗口都关了就退出 */ });
-  app.on('before-quit', () => { w1.destroy(); w2.destroy(); });
+  app.on('before-quit', () => { settingsWindow.close(); w1.destroy(); w2.destroy(); });
 
-  if (P.SELFTEST) require(process.argv.includes('--desktop-smoke') ? './w1-smoke-selftest' : './selftest').run({ store, w1, w2, broadcast });
+  if (P.SELFTEST) require(process.argv.includes('--desktop-smoke') ? './w1-smoke-selftest' : './selftest').run({ store, w1, w2, settingsWindow, broadcast });
 }

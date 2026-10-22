@@ -24,11 +24,20 @@ contextBridge.exposeInMainWorld('rc', {
   // W2 下拉窗
   w2Ready: () => ipcRenderer.send('w2:ready'),
   onW2Layout: on('w2:layout'),
+  onW2Preview: on('w2:preview'),
   reportW2Height: height => ipcRenderer.send('w2:height', height),
   onCommand: on('w2:cmd'),
   w2Drag: () => ipcRenderer.send('w2:drag'),
   setBlock: blocked => ipcRenderer.send('w2:block', blocked),
   hideW2: () => ipcRenderer.send('w2:hide'),
+
+  // 屏幕中央的独立设置浮窗
+  openSettings: () => ipcRenderer.invoke('settings:open'),
+  closeSettings: () => ipcRenderer.send('settings:close'),
+  settingsReady: () => ipcRenderer.send('settings:ready'),
+  onSettingsVisibility: on('settings:visibility'),
+  onSettingsReopen: on('settings:reopen'),
+  onSettingsError: on('settings:error'),
   createTask: task => ipcRenderer.invoke('task:create', task),
   updateTask: (id, patch) => ipcRenderer.invoke('task:update', id, patch),
   deleteTask: id => ipcRenderer.invoke('task:delete', id),

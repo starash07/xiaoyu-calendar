@@ -8,7 +8,7 @@ const W = require('./win32');
 
 const wait = ms => new Promise(r => setTimeout(r, ms));
 
-async function run({ store, w1, w2, broadcast }) {
+async function run({ store, w1, w2, settingsWindow, broadcast }) {
   const log = [];
   const note = (k, v) => { log.push([k, v]); require('./selftest-runtime').log('[selftest]', k, JSON.stringify(v)); };
   const shot = async (win, name) => fs.writeFileSync(path.join(P.SHOTS, `${name}.png`), (await win.webContents.capturePage()).toPNG());
@@ -90,10 +90,11 @@ async function run({ store, w1, w2, broadcast }) {
     })`);
     note('空标题校验', emptyCheck);
 
-    // 设置页
+    // 设置独立于主面板，在屏幕中央显示。
     await js(w2.win, 'Settings.open()');
     await wait(500);
-    await shot(w2.win, 'w2-settings');
+    if (!settingsWindow.ready) throw new Error('设置窗口未就绪');
+    await shot(settingsWindow.win, 'w2-settings');
     await js(w2.win, 'Settings.close()');
 
     // 透明无边框窗口还能不能拖边缩放：直接问系统，鼠标落在窗口边缘算什么区域

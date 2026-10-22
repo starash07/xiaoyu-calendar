@@ -19,6 +19,11 @@
 
 <main class="workspace">
   <section class="calendar-panel" aria-label="月历">
+    <section class="reminder-section" id="reminderSection" hidden aria-label="待确认提醒">
+      <div class="reminder-head"><b id="reminderHead"></b></div>
+      <div class="reminders" id="reminders" hidden></div>
+    </section>
+
     <section class="calendar-toolbar" aria-label="月份和快捷操作">
       <div class="month-pill">
         <button class="month-step" id="prevBtn" type="button" title="上一月（PageUp）" aria-label="上一月"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button>
@@ -30,10 +35,6 @@
     </section>
 
     <div class="content">
-      <section class="reminder-section" id="reminderSection" hidden aria-label="待确认提醒">
-        <div class="reminder-head"><b id="reminderHead"></b></div>
-        <div class="reminders" id="reminders" hidden></div>
-      </section>
       <div class="calwrap" id="calwrap">
         <div id="cal"></div>
         <div class="empty" id="empty" hidden>这个月还是空白的。<button id="emptyNewBtn" type="button">记下第一件事</button></div>
@@ -52,7 +53,6 @@
 <div class="toast" id="toast" hidden></div>
 <div class="overlay" id="modal" hidden></div>
 <div class="overlay" id="confirm" hidden></div>
-<div class="settings-overlay" id="settings" hidden></div>
 </div>
 
 <script src="../shared/dates.js"></script>
@@ -61,6 +61,5 @@
 <script src="../shared/calendar.js"></script>
 <script src="w2.js"></script>
 <script src="dialog.js"></script>
-<script src="settings.js"></script>
 </body>
 </html>

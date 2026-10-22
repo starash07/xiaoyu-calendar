@@ -1,9 +1,24 @@
-// 主界面：便当盒布局。提醒在月历上方，月份操作在下方，详情从窗口底部展开。
-const D = RCDates, C = RCColors, K = RCCal;
+// 主界面：便当盒布局。月份操作与提醒在月历上方，详情从窗口底部展开。
+const D = RCDates, C = RCColors, K = RCCal, A = RCDesktopAppearance;
 const $ = id => document.getElementById(id);
-const BAR_H = 15, FONT = 10;
+let appearancePreview = null, appearanceFrame = 0, calendarKey = '';
 
 const App = { state: null, view: null, hoverId: null, selectedId: null, sel: null };
+let settingsVisible = false;
+const Settings = {
+  isOpen: () => settingsVisible,
+  async open() {
+    if (!App.state || TaskDialog.isOpen()) return;
+    clearSelection();
+    try {
+      const result = await rc.openSettings();
+      if (!result?.ok) toast('设置窗口未能打开，请重试。', true);
+    } catch (_) { toast('设置窗口未能打开，请重试。', true); }
+  },
+  close() { if (settingsVisible) rc.closeSettings(); },
+};
+rc.onSettingsVisibility?.(visible => { settingsVisible = !!visible; });
+rc.onSettingsError?.(message => toast(message, true));
 const cal = $('cal'), calwrap = $('calwrap');
 let datePointerId = null;
 let reminderIndex = 0, remindersExpanded = false;
@@ -64,13 +79,12 @@ function report(res, okMsg) {
   else toast('保存失败，已恢复原来的状态', true);
 }
 
-// 拖选中 / 有弹窗 / 在设置页 / 输入框有焦点时，告诉主进程别自动收起
+// 页面只维护自己的输入锁；独立设置窗的暂停收起由主进程单独管理。
 function refreshBlock() {
   const el = document.activeElement;
   const typing = !!el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
-  rc.setBlock(!!App.sel || TaskDialog.isOpen() || Settings.isOpen() || typing);
+  rc.setBlock(!!App.sel || TaskDialog.isOpen() || typing);
   shell.classList.toggle('editing', TaskDialog.isOpen() && !TaskDialog.confirmOpen());
-  shell.classList.toggle('settings-open', Settings.isOpen());
 }
 document.addEventListener('focusin', refreshBlock);
 document.addEventListener('focusout', () => setTimeout(refreshBlock, 0));
@@ -81,8 +95,40 @@ function render() {
   if (!App.view) { const t = D.parse(s.today); App.view = { y: t.getFullYear(), m: t.getMonth() }; }
   const { y, m } = App.view;
   $('monthLabel').textContent = `${y} 年 ${m + 1} 月`;
+  renderCalendar(applyAppearance());
+  const first = D.toStr(new Date(y, m, 1)), last = D.toStr(new Date(y, m + 1, 0));
+  const monthTasks = s.tasks.filter(t => t.endDate >= first && t.startDate <= last);
+  $('empty').hidden = monthTasks.length > 0;
+  if (App.selectedId && !s.tasks.some(t => t.id === App.selectedId)) App.selectedId = null;
+  K.markBars(cal, 'sel', App.selectedId);
+  K.markBars(cal, 'hot', App.selectedId ? null : App.hoverId);
+  renderDetail();
+  renderReminders();
+  if (App.sel) drawPreview();
+}
+
+function applyAppearance() {
+  const ap = A.normalize({ ...App.state?.settings.w1.appearance, ...(appearancePreview || {}) });
+  shell.style.setProperty('--date-size', `${ap.dateFontSize}px`);
+  shell.style.setProperty('--fg', ap.textColor);
+  shell.style.setProperty('--fg2', C.rgba(ap.textColor, .72));
+  shell.style.setProperty('--fg3', C.rgba(ap.textColor, .32));
+  shell.style.setProperty('--weekend', ap.weekendColor);
+  shell.style.setProperty('--weekend-out', C.rgba(ap.weekendColor, .55));
+  const today = A.todayTone(ap.todayTone);
+  shell.style.setProperty('--today-bg', today.fill);
+  shell.style.setProperty('--today', today.ink);
+  return ap;
+}
+
+function renderCalendar(ap) {
+  const s = App.state, { y, m } = App.view;
+  const key = JSON.stringify([y, m, s.today, s.tasks, ap.barHeight, ap.barFontSize]);
+  // 字色和日期字号只更新样式，避免滑动时反复重建日历、打断悬停和选中。
+  if (key === calendarKey) return;
+  calendarKey = key;
   cal.innerHTML = K.monthHTML({ year: y, month: m, tasks: s.tasks, today: s.today,
-    barH: BAR_H, fontSize: FONT, barRadius: 999, barGap: 5, barPadding: 8 });
+    barH: ap.barHeight, fontSize: ap.barFontSize, barRadius: 999, barGap: 5, barPadding: 8 });
   cal.querySelectorAll('.cal-dc').forEach(cell => {
     cell.innerHTML = `<span class="date-number">${cell.textContent}</span>`;
     if (cell.dataset.date === s.today) cell.setAttribute('aria-current', 'date');
@@ -95,14 +141,8 @@ function render() {
     bar.setAttribute('role', 'button');
     bar.setAttribute('aria-label', `${t.title}，${D.rangeText(t.startDate, t.endDate)}${t.done ? '，已完成' : ''}`);
   });
-  const first = D.toStr(new Date(y, m, 1)), last = D.toStr(new Date(y, m + 1, 0));
-  const monthTasks = s.tasks.filter(t => t.endDate >= first && t.startDate <= last);
-  $('empty').hidden = monthTasks.length > 0;
-  if (App.selectedId && !s.tasks.some(t => t.id === App.selectedId)) App.selectedId = null;
   K.markBars(cal, 'sel', App.selectedId);
   K.markBars(cal, 'hot', App.selectedId ? null : App.hoverId);
-  renderDetail();
-  renderReminders();
   if (App.sel) drawPreview();
 }
 
@@ -489,7 +529,17 @@ rc.onCommand(cmd => {
   else if (cmd.type === 'discard') { TaskDialog.discard(); Settings.close({ animate: false, restoreFocus: false }); clearSelection(); }
 });
 
-rc.onState(s => { App.state = s; render(); if (Settings.isOpen()) Settings.render(); });
+rc.onState(s => { App.state = s; render(); });
+rc.onW2Preview?.(ap => {
+  appearancePreview = ap;
+  if (appearanceFrame) return;
+  appearanceFrame = requestAnimationFrame(() => {
+    appearanceFrame = 0;
+    if (!App.state || !App.view) return;
+    renderCalendar(applyAppearance());
+    reportHeight();
+  });
+});
 rc.getState().then(s => { App.state = s; render(); });
 
 window.W2App = { App, toast, report, refreshBlock, render, select, clearSelection };

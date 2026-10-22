@@ -98,6 +98,36 @@ for (const mode of ['blocked', 'dragging', 'pressed', 'hidden']) {
   assert.equal(h.w2.win.getBounds().y + h.w2.win.getBounds().height, 3);
   results.push('主动收起不被误打断，收起后内容增高仍保留 3px 边缘');
 }
+{
+  const h = harness();
+  h.cursor({ x: 900, y: 900 }); h.advance(64);
+  h.w2.setSettingsOpen(true);
+  h.w2.blocked = false;
+  h.advance(1000);
+  assert.equal(h.w2.collapsed, false, '主页面失焦不能覆盖设置窗的锁');
+  h.w2.setSettingsOpen(false); h.advance(64);
+  assert.equal(h.w2.collapsed, false, '关闭设置后重新开始离开计时');
+  h.advance(350); assert.equal(h.w2.collapsed, true);
+  results.push('设置打开保持展开；关闭后鼠标在外侧才自然收起');
+}
+{
+  const h = harness();
+  h.w2.setSettingsOpen(true); h.advance(300);
+  h.w2.setSettingsOpen(false); h.advance(500);
+  assert.equal(h.w2.collapsed, false, '关闭设置时鼠标在主面板内不能收起');
+  h.cursor({ x: 900, y: 900 }); h.w2.blocked = true;
+  h.w2.setSettingsOpen(true); h.w2.setSettingsOpen(false); h.advance(500);
+  assert.equal(h.w2.collapsed, false, '关闭设置不能解除其他填写/拖选锁');
+  h.w2.blocked = false; h.advance(400); assert.equal(h.w2.collapsed, true);
+  results.push('关闭设置保留鼠标悬停及填写阻止收起，离开且无其他锁才收起');
+}
+{
+  const h = harness();
+  h.cursor({ x: 900, y: 900 }); h.advance(192);
+  h.w2.setSettingsOpen(true); h.advance(300);
+  assert.equal(h.w2.collapsed, false); assert.equal(h.w2.win.getBounds().y, 0);
+  results.push('收起途中打开设置，主面板顺势展开并保持');
+}
 const output = path.join(__dirname, '../.data-selftest/shots/w2-motion-result.json');
 fs.mkdirSync(path.dirname(output), { recursive: true });
 fs.writeFileSync(output, JSON.stringify({ passed: true, simulatedClock: true, visibleWindows: 0, osMouseInput: false, realDataAccess: false, results }, null, 2));

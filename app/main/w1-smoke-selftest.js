@@ -11,7 +11,7 @@ const { Store } = require('./store');
 const getWindowLong = require('koffi').load('user32.dll').func('intptr __stdcall GetWindowLongPtrW(intptr hwnd, int index)');
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-async function run({ store, w1, w2, broadcast }) {
+async function run({ store, w1, w2, settingsWindow, broadcast }) {
   assert.ok(P.SELFTEST && P.DATA.endsWith('.data-selftest'), '短测只能使用独立数据');
   const started = Date.now(), log = [];
   const note = (name, value) => { log.push({ name, value }); require('./selftest-runtime').log('[desktop-smoke]', name, JSON.stringify(value)); };
@@ -92,6 +92,8 @@ async function run({ store, w1, w2, broadcast }) {
 
     w2.show();
     await js(w2.win, 'Settings.open()');
+    for (let i = 0; i < 100 && !settingsWindow.ready; i++) await wait(20);
+    assert.ok(settingsWindow.ready, '设置窗口未就绪');
     const checks = [
       ['panelOpacity', 32, s => assert.equal(s.tint, 'rgba(255, 255, 255, 0.32)')],
       ['width', 460, s => { assert.equal(s.width, 460); assert.equal(w1.size.w, 476); }],
@@ -102,18 +104,18 @@ async function run({ store, w1, w2, broadcast }) {
     ];
     for (const [key, value, check] of checks) {
       const before = store.settings.w1.appearance[key];
-      await js(w2.win, `(() => { const el = document.getElementById('st_${key}'); el.value = ${JSON.stringify(value)}; el.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+      await js(settingsWindow.win, `(() => { const el = document.getElementById('st_${key}'); el.value = ${JSON.stringify(value)}; el.dispatchEvent(new Event('input', { bubbles: true })); })()`);
       await wait(240);
       check(await snapshot());
       assert.equal(store.settings.w1.appearance[key], before, `${key} 在预览阶段提前保存`);
-      await js(w2.win, `document.getElementById('st_${key}').dispatchEvent(new Event('change', { bubbles: true }))`);
+      await js(settingsWindow.win, `document.getElementById('st_${key}').dispatchEvent(new Event('change', { bubbles: true }))`);
       await wait(120);
       assert.equal(store.settings.w1.appearance[key], value, `${key} 没有保存`);
     }
     const persisted = new Store();
     for (const [key, value] of checks) assert.equal(persisted.settings.w1.appearance[key], value, `${key} 重新读取后丢失`);
     note('六项设置', '磨砂只验证设置保留，其余外观验证预览和保存；日期字号不影响条目文字');
-    await js(w2.win, `document.getElementById('stReset').click()`);
+    await js(settingsWindow.win, `document.getElementById('stReset').click()`);
     await wait(300);
     assert.deepEqual(store.settings.w1.appearance, A.DEFAULT);
     const reset = await snapshot(); assert.equal(reset.font, '17px'); assert.equal(reset.width, 420);

@@ -16,7 +16,9 @@ class W2 {
     this.dock = null;
     this.dockDisplayId = null;
     this.collapsed = false;
-    this.blocked = false;     // 页面告诉我们：新建中 / 有弹窗 / 在设置页 / 输入框有焦点，这时不自动收起
+    this.blocked = false;     // 主页面的新建 / 拖选 / 输入锁。
+    this.settingsOpen = false; // 独立设置窗的锁不能被主页面 focusout 覆盖。
+    this.onHide = null;
     this.dragging = false;
     this.anim = null;
     this.autoCollapsing = false;
@@ -185,17 +187,24 @@ class W2 {
     this.animate(this.dockBounds(false), 180, easeOut);
   }
 
+  setSettingsOpen(open) {
+    this.settingsOpen = !!open;
+    this.leaveSince = 0;
+    if (open) this.expand();
+    this.send('settings:visibility', this.settingsOpen);
+  }
+
   poll() {
     if (!this.win || this.win.isDestroyed() || !this.win.isVisible() || !this.dock || this.dragging) return;
     const c = screen.getCursorScreenPoint(), b = this.win.getBounds();
     const inside = c.x >= b.x && c.x < b.x + b.width && c.y >= b.y && c.y < b.y + b.height;
     // 自动收起时允许鼠标返回打断；手动点关闭不因鼠标仍在原位置而反向展开。
     if (this.anim) {
-      if (this.autoCollapsing && (inside || this.blocked)) this.expand();
+      if (this.autoCollapsing && (inside || this.blocked || this.settingsOpen)) this.expand();
       return;
     }
     if (this.collapsed) { if (inside && this.win.isVisible()) this.expand(); return; }
-    if (inside || this.blocked || W.leftButtonDown()) { this.leaveSince = 0; return; }
+    if (inside || this.blocked || this.settingsOpen || W.leftButtonDown()) { this.leaveSince = 0; return; }
     if (!this.leaveSince) this.leaveSince = Date.now();
     else if (Date.now() - this.leaveSince >= LEAVE_MS) this.collapse(true);
   }
@@ -256,6 +265,7 @@ class W2 {
   // 用户主动隐藏 / 收起：关掉填写弹窗，放弃没保存的内容
   hide() {
     if (!this.win) return;
+    this.onHide?.();
     this.send('w2:cmd', { type: 'discard' });
     if (this.dock) this.collapse(); else this.win.hide();
   }

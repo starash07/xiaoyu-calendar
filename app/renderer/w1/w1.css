@@ -8,7 +8,7 @@ button:focus-visible { outline: 2px solid #8a70d6; outline-offset: 2px; }
 .panel {
   --fg: #315873; --fg2: rgb(49 88 115 / .72); --fg3: rgb(49 88 115 / .32);
   --weekend: #8a70d6; --weekend-out: #b7acd7; --date-size: 17px;
-  --today-fill: #c5e5d8; --today-ink: #427e68; --week-height: 54px;
+  --week-height: 54px;
   position: relative; width: var(--w, 420px); border-radius: 15px; overflow: hidden;
   border: 1px solid #ffffff52; border-top-color: #ffffffa6; border-bottom-color: #ffffff33;
   color: var(--fg); box-shadow: 0 3px 8px #254b6214;
@@ -49,17 +49,22 @@ button:focus-visible { outline: 2px solid #8a70d6; outline-offset: 2px; }
 .cal-dc.out:nth-child(n+6) { color: var(--weekend-out); }
 .date-number { display: grid; place-items: center; width: 28px; height: 28px; padding-top: 2px; }
 .cal-dc.today { font-weight: 400; }
-.cal-dc.today .date-number { position: relative; isolation: isolate; border-radius: 50%; background: var(--today-fill); color: var(--today-ink); box-shadow: 2px 3px 6px #315f5233, -1px -1px 4px #eafff36b; }
+.cal-dc.today .date-number {
+  position: relative; isolation: isolate; border-radius: 50%;
+  border: 1px solid #ffffff70; background: transparent; color: var(--fg); font-weight: 500;
+  box-shadow: 0 2px 4px #00000024, 0 0 0 .5px #00000012, inset 0 1px 1px #ffffffb3, inset 0 -1px 1.5px #ffffff80;
+}
+.cal-dc.today:nth-child(n+6) .date-number { color: var(--weekend); }
 .cal-dc.today .date-number::before, .cal-dc.today .date-number::after { content: ""; position: absolute; z-index: -1; pointer-events: none; }
+/* 无色玻璃：中心透出原背景，明暗边缘与上下反光表现圆润厚度，不铺彩色底。 */
 .cal-dc.today .date-number::before {
   inset: 0; border-radius: inherit;
-  background: radial-gradient(ellipse at 18% 20%, #d5f5e6bb 0%, #d5f5e600 64%),
-    radial-gradient(ellipse at 76% 30%, #add9c38a 0%, #add9c300 68%),
-    linear-gradient(145deg, #bfe3d2 0%, #d4ecdf 58%, #e4f5e9 100%);
-  box-shadow: inset 1px 1px 1px #8ebfa54d, inset -1px -1px 1.5px #edfff2d9;
+  background: radial-gradient(ellipse at 35% -22%, #ffffff94 0%, #ffffff18 43%, #ffffff00 66%),
+    linear-gradient(155deg, #ffffff20 0%, #ffffff00 43%, #00000008 64%, #ffffff26 100%);
+  box-shadow: inset .5px .5px 1px #ffffffb3, inset -.5px -1px 1.2px #ffffff66;
 }
-.cal-dc.today .date-number::after { inset: 1px; border-radius: inherit; background: linear-gradient(120deg, #effff42b 0%, #effff400 48%, #dffff054 80%, #effff48c 100%); filter: blur(.3px); opacity: .65; transition: opacity .24s ease-out; }
-.cal-dc.today:hover .date-number::after, .cal-dc.today.hov .date-number::after { opacity: .9; }
+.cal-dc.today .date-number::after { inset: 1px; border-radius: inherit; background: radial-gradient(ellipse 85% 35% at 50% 110%, #ffffff80 0%, #ffffff00 100%); border-top: .5px solid #ffffff80; border-bottom: .5px solid #ffffff66; opacity: .75; transition: opacity .24s ease-out; }
+.cal-dc.today:hover .date-number::after, .cal-dc.today.hov .date-number::after { opacity: 1; }
 .cal-lanes { position: relative; margin-top: 6px; }
 .cal-lanes:empty { height: 0; margin: 0; }
 .cal-bar { cursor: default; transition: transform .16s, filter .16s; }
