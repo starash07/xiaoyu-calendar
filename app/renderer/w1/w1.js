@@ -10,6 +10,8 @@ let preview = null;    // 设置页拖滑块时的临时外观
 let hoverId = null;
 let calendarKey = '', detailKey = '', hideTimer = null;
 let sizeFrame = 0, lastSize = '', calendarWidth = 0, calendarSizeFrame = 0;
+let detailHeightReserve = 0, detailMotionTimer = null;
+let pendingDetailReveal = false, detailRevealFrame = 0;
 let cursor = { x: -1, y: -1 };
 
 const appearance = () => A.normalize({ ...state?.settings.w1.appearance, ...(preview || {}) });
@@ -73,10 +75,64 @@ function renderDetail() {
     const html = K.detailHTML(task, state.today);
     if (html !== detailKey) { detailKey = html; detail.innerHTML = html; }
   }
+  cancelAnimationFrame(detailRevealFrame);
+  detailRevealFrame = 0;
+  pendingDetailReveal = false;
+  if (task || details.classList.contains('show')) reserveDetailSpace(!!task);
+  else finishDetailMotion();
+  // 先让新画布到位再展开，避免动画开头几帧在旧视口中被裁掉。
+  if (task && !details.classList.contains('show') && innerHeight + 1 < detailCanvasHeight()) {
+    pendingDetailReveal = true;
+    return;
+  }
   // 收起时不清空内容，否则 0fr 会直接跳到零高，无法呈现收起动画。
   details.classList.toggle('show', !!task);
   details.setAttribute('aria-hidden', String(!task));
 }
+
+const detailCanvasHeight = () => Math.ceil(detailHeightReserve + (info?.margin ?? 8) * 2);
+function revealDetails() {
+  if (!pendingDetailReveal) return;
+  pendingDetailReveal = false;
+  details.classList.add('show');
+  details.setAttribute('aria-hidden', 'false');
+  clearTimeout(detailMotionTimer);
+  detailMotionTimer = setTimeout(finishDetailMotion, 320);
+}
+window.addEventListener('resize', () => {
+  if (!pendingDetailReveal || detailRevealFrame || innerHeight + 1 < detailCanvasHeight()) return;
+  // 给新尺寸一帧初始状态，之后才开始过渡；取消悬停可取消这两次回调。
+  detailRevealFrame = requestAnimationFrame(() => {
+    detailRevealFrame = requestAnimationFrame(() => { detailRevealFrame = 0; revealDetails(); });
+  });
+});
+
+// 动画期间预留透明画布，避免逐帧调整 Chromium 视口并丢弃尺寸不匹配的旧帧。
+// 只保留画布空间，卡片的可见底边仍按 CSS 自然伸缩；结束后恢复实际内容高度。
+function reserveDetailSpace(show) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const currentHeight = panel.getBoundingClientRect().height, style = getComputedStyle(details);
+  const baseHeight = currentHeight - details.getBoundingClientRect().height - parseFloat(style.marginTop);
+  const targetHeight = baseHeight + (show ? detail.getBoundingClientRect().height + parseFloat(style.getPropertyValue('--detail-gap')) : 0);
+  detailHeightReserve = Math.max(detailHeightReserve, currentHeight, targetHeight);
+  clearTimeout(detailMotionTimer);
+  // 换条、反向和无 transitionend（如运行时关闭动画）也必须释放预留空间。
+  detailMotionTimer = setTimeout(() => {
+    if (pendingDetailReveal) revealDetails();
+    else finishDetailMotion();
+  }, 320);
+  reportSize();
+}
+
+function finishDetailMotion() {
+  clearTimeout(detailMotionTimer);
+  detailMotionTimer = null;
+  detailHeightReserve = 0;
+  reportSize();
+}
+details.addEventListener('transitionend', event => {
+  if (event.target === details && event.propertyName === 'grid-template-rows') finishDetailMotion();
+});
 
 function renderFlag() {
   const open = new Set(state.tasks.filter(x => !x.done).map(x => x.id));
@@ -109,13 +165,13 @@ function hitTest(x, y) {
   $('flagTip').hidden = !(!$('flag').hidden && el && el.closest('#flag'));
 }
 
-// 内容大小变了就告诉主进程：窗口顶部不动，底边跟着伸缩
+// 动画使用预留画布，静止后报告实际内容大小；窗口顶部保持原位。
 function reportSize() {
   if (sizeFrame) return;
   sizeFrame = requestAnimationFrame(() => {
     sizeFrame = 0;
     const r = panel.getBoundingClientRect(), margin = info?.margin ?? 8;
-    const w = Math.ceil(r.width + margin * 2), h = Math.ceil(r.height + margin * 2);
+    const w = Math.ceil(r.width + margin * 2), h = Math.ceil(Math.max(r.height, detailHeightReserve) + margin * 2);
     const key = `${w}/${h}`;
     if (key !== lastSize) { lastSize = key; rc.reportSize(w, h); }
   });

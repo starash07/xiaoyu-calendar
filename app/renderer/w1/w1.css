@@ -70,9 +70,9 @@ button:focus-visible { outline: 2px solid #8a70d6; outline-offset: 2px; }
 .cal-bar { cursor: default; transition: transform .16s, filter .16s; }
 .cal-bar.hot, .cal-bar.sel { box-shadow: none; transform: translateY(-1px); filter: saturate(1.18); }
 
-/* 保留内容到收起结束，观察每一帧高度，让原生窗口底边跟着缓动。 */
-.details-wrap { display: grid; grid-template-rows: 0fr; opacity: 0; margin-top: 0; transition: grid-template-rows .24s cubic-bezier(.22, 1, .36, 1), opacity .18s, margin-top .24s; }
-.details-wrap.show { grid-template-rows: 1fr; opacity: 1; margin-top: 13px; }
+/* 动画期间保留内容和透明画布，卡片的可见底边按自然高度缓动。 */
+.details-wrap { --detail-gap: 13px; display: grid; grid-template-rows: 0fr; opacity: 0; margin-top: 0; transition: grid-template-rows .24s cubic-bezier(.22, 1, .36, 1), opacity .18s, margin-top .24s; }
+.details-wrap.show { grid-template-rows: 1fr; opacity: 1; margin-top: var(--detail-gap); }
 .details-clip { min-height: 0; overflow: hidden; }
 .detail { display: grid; grid-template-columns: 3px minmax(0, 1fr); gap: 10px; margin: 0; padding: 12px 0 0; border-top: 1px solid var(--detail-rule, rgb(49 88 115 / .14)); }
 .dt-bar { width: 3px; border-radius: 3px; }

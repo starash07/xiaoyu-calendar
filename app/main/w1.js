@@ -58,7 +58,8 @@ class W1 {
       webPreferences: { preload: P.PRELOAD, backgroundThrottling: false, offscreen: true },
     });
     win.setMenu(null);
-    win.webContents.setFrameRate(30);
+    // 离屏绘制仅在画面变化时出帧；展开 / 收起允许跟上常见的 60Hz 刷新率。
+    win.webContents.setFrameRate(60);
     win.webContents.on('paint', (_event, _dirty, image) => {
       if (this.quitting || this.win !== win) return;
       this.lastFrame = image;

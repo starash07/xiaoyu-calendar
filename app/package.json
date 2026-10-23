@@ -11,6 +11,7 @@
     "selftest:desktop": "electron . --selftest --desktop-host-smoke",
     "selftest:desktop-ui": "electron . --selftest --desktop-smoke",
     "selftest:desktop-headless": "electron . --selftest --desktop-headless",
+    "selftest:desktop-motion": "electron scripts/check-desktop-motion.cjs --selftest",
     "selftest:calendar-selection": "electron scripts/check-calendar-selection.cjs --selftest",
     "selftest:task-dialog": "electron scripts/check-task-dialog.cjs --selftest",
     "selftest:settings": "electron scripts/check-settings.cjs --selftest",

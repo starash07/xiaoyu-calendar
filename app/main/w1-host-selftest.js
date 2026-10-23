@@ -111,7 +111,11 @@ async function run() {
     const cursor = await js(`(() => {const r=document.querySelector('.cal-bar').getBoundingClientRect();return {x:r.left+8,y:r.top+r.height/2};})()`);
     w1.send('w1:cursor', cursor);
     const opening = [];
-    for (let i = 0; i < 12; i++) { await wait(25); opening.push(w1.size.h); }
+    // 动画复用预留的透明画布，检查实际卡片底边的中间帧，不把画布高度当可见高度。
+    for (let i = 0; i < 12; i++) {
+      await wait(25);
+      opening.push(await js('Math.ceil(document.getElementById("panel").getBoundingClientRect().height)') + MARGIN * 2);
+    }
     const expanded = { ...w1.size };
     assert.ok(expanded.h > base.h + 30, '详情未展开');
     assert.ok(opening.some(h => h > base.h && h < expanded.h), '展开缺少缓动中间帧');
