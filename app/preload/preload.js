@@ -45,6 +45,7 @@ contextBridge.exposeInMainWorld('rc', {
   deleteTask: id => ipcRenderer.invoke('task:delete', id),
   confirmReminder: id => ipcRenderer.invoke('reminder:confirm', id),
   saveSettings: patch => ipcRenderer.invoke('settings:save', patch),
+  resetAppearance: () => ipcRenderer.invoke('appearance:reset'),
   previewAppearance: ap => ipcRenderer.send('appearance:preview', ap),
   setAutoStart: on => ipcRenderer.invoke('autostart:set', on),
 });

@@ -21,7 +21,7 @@ function start() {
     require('./w1-desktop-host-smoke').run();
     return;
   }
-  const { Store } = require('./store');
+  const { Store, DEFAULT_SETTINGS } = require('./store');
   const { W1 } = require('./w1');
   const { W2 } = require('./w2');
   const { SettingsWindow } = require('./settings-window');
@@ -58,13 +58,17 @@ function start() {
     return store.tasks.filter(t => !t.done && t.startDate <= day && t.endDate >= day).length;
   };
   const setAutoStart = on => {
-    app.setLoginItemSettings({ openAtLogin: on, path: process.execPath, args: [P.ROOT] });
+    app.setLoginItemSettings({ openAtLogin: on, path: process.execPath, args: app.isPackaged ? [] : [P.ROOT] });
     return store.saveSettings({ general: { autoStart: on } });
   };
 
+  const showWindows = () => {
+    w1.restore();
+    w2.show(); // 最后激活主界面；挂件保持普通、非置顶的窗口层级。
+  };
   tray = createTray({
-    toggle: () => w2.toggle(),
-    show: () => w2.show(),
+    toggle: () => { if (w2.isShown()) w2.hide(); else showWindows(); },
+    show: showWindows,
     settings: () => w2.command({ type: 'settings' }),
     isPinned: () => !!store.settings.w1.pinned,
     setPinned: on => { const result = w1.setPinned(on); broadcast(); return result; },
@@ -108,6 +112,17 @@ function start() {
   ipcMain.handle('task:delete', (e, id) => store.deleteTask(id));
   ipcMain.handle('reminder:confirm', (e, id) => store.confirmReminder(id));
   ipcMain.handle('settings:save', (e, patch) => store.saveSettings(patch));
+  ipcMain.handle('appearance:reset', e => {
+    if (!settingsWindow.owns(e.sender)) return { ok: false };
+    const bounds = w2.defaultSizeBounds(DEFAULT_SETTINGS.w2);
+    if (!bounds) return { ok: false, error: '主界面暂时无法恢复尺寸' };
+    const result = store.saveSettings({ w1: { appearance: DEFAULT_SETTINGS.w1.appearance }, w2: bounds });
+    if (result.ok) {
+      previewAppearance(null);
+      w2.resetSize(bounds);
+    }
+    return result;
+  });
   ipcMain.on('appearance:preview', (e, ap) => {
     if (settingsWindow.owns(e.sender)) previewAppearance(ap);
   });
@@ -131,7 +146,7 @@ function start() {
   screen.on('display-metrics-changed', () => { w1.ensureOnScreen(true); w1.place(); w1.sendInfo(); w2.updateLayoutLimit(true); settingsWindow.updateDisplay(); });
   screen.on('display-added', () => { w1.sendInfo(); w2.updateLayoutLimit(true); settingsWindow.updateDisplay(); });
 
-  app.on('second-instance', () => w2.show());   // 重复启动：唤出已经在运行的下拉窗
+  app.on('second-instance', showWindows);   // 重复启动也一并唤回未钉住的挂件。
   app.on('window-all-closed', () => { /* 常驻托盘，不因为窗口都关了就退出 */ });
   app.on('before-quit', () => { tray?.destroy(); settingsWindow.close(); w1.destroy(); w2.destroy(); });
 

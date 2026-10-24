@@ -59,7 +59,8 @@ new ResizeObserver(() => {
     cal.style.setProperty('--week-height', `${Math.max(56, Math.round(width * .135))}px`);
   });
 }).observe(cal);
-rc.onW2Layout(({ maxHeight }) => {
+rc.onW2Layout(({ maxHeight, remeasure }) => {
+  if (remeasure) lastHeight = 0;
   availableHeight = maxHeight;
   shell.style.setProperty('--available-height', `${maxHeight}px`);
   measureDetail();

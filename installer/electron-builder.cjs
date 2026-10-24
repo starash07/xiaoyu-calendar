@@ -1,0 +1,32 @@
+module.exports = {
+  appId: 'local.richeng.guajian',
+  productName: '鱼鱼日程',
+  directories: { output: '../dist/engine', buildResources: '../installer' },
+  files: [
+    'main/**/*.js', 'preload/**/*.js', 'renderer/**/*', 'assets/icons/*',
+    '!main/*selftest*', '!scripts/**', '!**/.data{,*/**}',
+  ],
+  asar: true,
+  asarUnpack: ['node_modules/koffi/**'],
+  npmRebuild: false,
+  electronDist: 'node_modules/electron/dist',
+  win: {
+    target: [{ target: 'nsis', arch: ['x64'] }],
+    icon: 'assets/icons/app-icon.ico',
+    executableName: '鱼鱼日程',
+    signExecutable: false,
+  },
+  nsis: {
+    oneClick: true,
+    perMachine: false,
+    runAfterFinish: false,
+    createDesktopShortcut: true,
+    createStartMenuShortcut: true,
+    shortcutName: '鱼鱼日程',
+    uninstallDisplayName: '鱼鱼日程',
+    deleteAppDataOnUninstall: false,
+    include: 'install-path.nsh',
+    artifactName: '鱼鱼日程-${version}-engine.exe',
+    installerLanguages: ['zh_CN', 'en_US'],
+  },
+};

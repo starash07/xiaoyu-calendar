@@ -1,6 +1,7 @@
 # 依赖与下载缓存
 app/node_modules/
 .cache/
+dist/
 
 # 运行时数据（本机日程、Electron 缓存、自测输出）
 app/.data/

@@ -49,7 +49,7 @@ async function run({store, w1, broadcast, note}) {
     await wait(230);
   };
   try {
-    await back.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent('<title>小鱼玻璃自测色块</title><style>html,body{width:100%;height:100%;margin:0;background:#ef9262}</style>'));
+    await back.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent('<title>鱼鱼日程玻璃自测色块</title><style>html,body{width:100%;height:100%;margin:0;background:#ef9262}</style>'));
     back.showInactive();
     w1.win.setAlwaysOnTop(false); w1.win.setAlwaysOnTop(true); w1.win.showInactive(); w1.applyGlass(true);
     await wait(220);

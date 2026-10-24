@@ -82,14 +82,14 @@ class W2 {
   }
 
   updateLayoutLimit(force = false) {
-    if (!this.win || this.win.isDestroyed()) return;
+    if (!this.win || this.win.isDestroyed() || this.win.isMinimized()) return;
     const b = this.win.getBounds();
     const wa = this.dock ? this.dockArea() : screen.getDisplayMatching(b).workArea;
     const top = this.dock === 'top' ? wa.y : Math.max(wa.y, b.y);
     const maxHeight = Math.max(MIN_HEIGHT, wa.y + wa.height - top);
     if (force || maxHeight !== this.maxHeight) {
       this.maxHeight = maxHeight;
-      this.send('w2:layout', { maxHeight });
+      this.send('w2:layout', { maxHeight, remeasure: force });
     }
     this.resizeToContent();
   }
@@ -98,11 +98,35 @@ class W2 {
     if (!Number.isFinite(height) || height <= 0 || !this.win || this.win.isDestroyed()) return;
     this.contentHeight = Math.ceil(height);
     // 滑出/收起先完成位置动画，再应用期间最新的内容高度。
-    if (this.anim || this.dragging) return;
+    if (this.anim || this.dragging || this.win.isMinimized()) return;
     const b = this.win.getBounds();
     const h = Math.max(MIN_HEIGHT, Math.min(this.contentHeight, this.maxHeight || 1000));
     const y = this.dock === 'top' && this.collapsed ? this.dockArea().y - h + STRIP : b.y;
     if (b.height !== h || b.y !== y) this.setBounds({ ...b, height: h, y });
+  }
+
+  defaultSizeBounds({ width, height }) {
+    if (!this.win || this.win.isDestroyed()) return null;
+    const b = this.win.getBounds();
+    const wa = this.dock ? this.dockArea() : screen.getDisplayMatching(b).workArea;
+    const x = Math.max(wa.x, Math.min(b.x, wa.x + wa.width - width));
+    const y = this.dock === 'top' ? wa.y : Math.max(wa.y, Math.min(b.y, wa.y + wa.height - MIN_HEIGHT));
+    const bounds = { x, y, width, height: Math.max(MIN_HEIGHT, Math.min(height, wa.y + wa.height - y)) };
+    if (this.dock === 'left') bounds.x = this.collapsed ? wa.x - width + STRIP : wa.x;
+    if (this.dock === 'right') bounds.x = wa.x + wa.width - (this.collapsed ? STRIP : width);
+    if (this.dock === 'top' && this.collapsed) bounds.y = wa.y - bounds.height + STRIP;
+    return bounds;
+  }
+
+  resetSize(bounds) {
+    if (!bounds || !this.win || this.win.isDestroyed()) return;
+    clearInterval(this.anim);
+    this.anim = null;
+    this.autoCollapsing = false;
+    // 旧宽度下测量的高度不能用于重置；由页面重新按默认宽度计算实际内容高度。
+    this.contentHeight = null;
+    this.setBounds(bounds);
+    this.updateLayoutLimit(true);
   }
 
   initialBounds(s) {
@@ -199,7 +223,7 @@ class W2 {
   }
 
   poll() {
-    if (!this.win || this.win.isDestroyed() || !this.win.isVisible() || !this.dock || this.dragging) return;
+    if (!this.win || this.win.isDestroyed() || !this.win.isVisible() || this.win.isMinimized() || !this.dock || this.dragging) return;
     const c = screen.getCursorScreenPoint(), b = this.win.getBounds();
     const inside = c.x >= b.x && c.x < b.x + b.width && c.y >= b.y && c.y < b.y + b.height;
     // 自动收起时允许鼠标返回打断；手动点关闭不因鼠标仍在原位置而反向展开。
@@ -215,7 +239,7 @@ class W2 {
 
   // 用户拖完窗口：靠近外侧边缘就吸附，拖离边缘就取消吸附
   afterMove() {
-    if (!this.win || this.anim || this.collapsed) return;
+    if (!this.win || this.win.isMinimized() || this.anim || this.collapsed) return;
     const b = this.win.getBounds();
     const hit = this.detectDock(b);
     if (hit) {
@@ -232,7 +256,7 @@ class W2 {
   }
 
   saveBounds() {
-    if (!this.win || this.collapsed || this.anim) return;
+    if (!this.win || this.win.isMinimized() || this.collapsed || this.anim) return;
     const b = this.win.getBounds();
     this.store.saveSettings({ w2: { dock: this.dock, x: b.x, y: b.y, width: b.width, height: b.height } });
   }
@@ -256,13 +280,25 @@ class W2 {
     }, 16);
   }
 
-  isShown() { return !!this.win && this.win.isVisible() && !this.collapsed; }
+  isShown() { return !!this.win && !this.win.isDestroyed() && this.win.isVisible() && !this.win.isMinimized() && !this.collapsed; }
 
   show() {
-    if (!this.win) return;
+    if (!this.win || this.win.isDestroyed()) return;
+    const win = this.win;
+    // 从托盘激活时短暂恢复 Shell 注册，才能退出“显示桌面”的桌面前置状态。
+    // 等本轮原生激活消息处理后再撤掉任务栏项，窗口仍保持普通层级。
+    clearImmediate(this.taskbarRestore);
+    win.setSkipTaskbar(false);
+    this.taskbarRestore = setImmediate(() => {
+      this.taskbarRestore = null;
+      if (!win.isDestroyed()) win.setSkipTaskbar(true);
+    });
+    // 显示桌面造成的最小化必须先恢复，不能只把窗口重新绘制出来。
+    if (this.win.isMinimized()) this.win.restore();
     this.updateLayoutLimit(true);
     if (this.dock) { if (!this.win.isVisible()) this.win.showInactive(); this.expand(); }
     else this.win.show();
+    this.win.moveTop();
     this.win.focus();
   }
 
@@ -284,6 +320,7 @@ class W2 {
 
   destroy() {
     this.quitting = true;
+    clearImmediate(this.taskbarRestore);
     clearInterval(this.pollTimer);
     clearInterval(this.dragTimer);
     clearInterval(this.anim);

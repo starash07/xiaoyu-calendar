@@ -282,6 +282,17 @@ class W1 {
     return true;
   }
 
+  restore() {
+    if (this.quitting || this.hidden || this.pinned || !this.ready) return false;
+    if (!this.surface?.hwnd || !this.native.isWindow(this.hwnd)) {
+      this.createSurface();
+      if (!this.unembed()) return false;
+    }
+    this.ensureOnScreen(false);
+    if (!this.surface.restore()) return false;
+    return this.place();
+  }
+
   // 页面报告内容大小：顶部位置不动，只改宽高（底边随内容伸缩）
   resize(w, h) {
     if (!Number.isFinite(w) || !Number.isFinite(h)) return;

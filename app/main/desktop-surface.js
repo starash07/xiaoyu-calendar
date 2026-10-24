@@ -15,6 +15,7 @@ const register = u.func('uint16 __stdcall RegisterClassExW(RC_SurfaceClass *info
 const create = u.func('intptr __stdcall CreateWindowExW(uint ex, str16 cls, str16 title, uint style, int x, int y, int width, int height, intptr parent, intptr menu, intptr instance, void *param)');
 const destroy = u.func('bool __stdcall DestroyWindow(intptr hwnd)');
 const defProc = u.func('intptr __stdcall DefWindowProcW(intptr hwnd, uint msg, uintptr wparam, intptr lparam)');
+const loadCursor = u.func('intptr __stdcall LoadCursorW(intptr instance, intptr resource)');
 const show = u.func('bool __stdcall ShowWindow(intptr hwnd, int command)');
 const visible = u.func('bool __stdcall IsWindowVisible(intptr hwnd)');
 const position = u.func('bool __stdcall SetWindowPos(intptr hwnd, intptr after, int x, int y, int width, int height, uint flags)');
@@ -85,8 +86,11 @@ function ensureClass() {
     }
     return defProc(hwnd, msg, wp, lp);
   }, 'RC_SurfaceProc *');
+  // 原生表面接收鼠标，离屏网页的 CSS 不能替它恢复光标；由 WM_SETCURSOR 的默认处理切回系统箭头。
+  const cursor = loadCursor(0, 32512); // IDC_ARROW，使用用户当前的系统指针主题。
+  if (!cursor) throw new Error(`桌面显示窗口光标加载失败：${lastError()}`);
   const atom = register({ size: koffi.sizeof(WindowClass), style: 0, proc: windowProc, classExtra: 0, windowExtra: 0,
-    instance, icon: 0, cursor: 0, background: 0, menu: null, name: className, smallIcon: 0 });
+    instance, icon: 0, cursor, background: 0, menu: null, name: className, smallIcon: 0 });
   if (!atom) throw new Error(`桌面显示窗口注册失败：${lastError()}`);
   registered = true;
 }
@@ -97,7 +101,7 @@ class DesktopSurface {
     this.onInput = onInput; this.onLost = onLost; this.onError = onError;
     this.clickThrough = true; this.scale = 1;
     this.metrics = { frames: 0, buffers: 0, failures: 0, staleFrames: 0 };
-    this.hwnd = n(create(0x080800a0, className, '小鱼日程表 · 桌面', 0x80000000, 0, 0, 1, 1, 0, 0, instance, null));
+    this.hwnd = n(create(0x080800a0, className, '鱼鱼日程 · 桌面', 0x80000000, 0, 0, 1, 1, 0, 0, instance, null));
     if (!this.hwnd) throw new Error(`桌面显示窗口创建失败：${lastError()}`);
     instances.set(this.hwnd, this);
   }
@@ -127,6 +131,13 @@ class DesktopSurface {
 
   // 只根据自己的可见位调用一次 ShowWindow；父窗口隐藏时不反复 show。
   show() { if (this.hwnd && this.metrics.frames && !(W.styleOf(this.hwnd) & 0x10000000)) show(this.hwnd, 8); }
+  // 托盘主动唤回：恢复普通窗口状态和层级，不抢焦点、不设为置顶。
+  restore() {
+    if (!this.hwnd || !this.metrics.frames) return false;
+    show(this.hwnd, 4); // SW_SHOWNOACTIVATE：恢复到原大小，且不激活窗口。
+    return !!position(this.hwnd, 0, 0, 0, 0, 0,
+      W.SWP.NOMOVE | W.SWP.NOSIZE | W.SWP.NOACTIVATE | W.SWP.SHOWWINDOW);
+  }
   hide() { if (this.hwnd && (W.styleOf(this.hwnd) & 0x10000000)) show(this.hwnd, 0); }
   isVisible() { return !!this.hwnd && !!visible(this.hwnd); }
 

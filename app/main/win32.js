@@ -26,6 +26,7 @@ const GetCursorPos = user32.func('bool __stdcall GetCursorPos(_Out_ RC_POINT *pt
 const WindowFromPoint = user32.func('intptr __stdcall WindowFromPoint(RC_POINT pt)');
 const GetClassNameW = user32.func('int __stdcall GetClassNameW(intptr hwnd, void *buf, int max)');
 const GetAsyncKeyState = user32.func('short __stdcall GetAsyncKeyState(int key)');
+const GetDoubleClickTime = user32.func('uint __stdcall GetDoubleClickTime()');
 const SetWinEventHook = user32.func('intptr __stdcall SetWinEventHook(uint first, uint last, intptr module, RC_DesktopEvent *callback, uint process, uint thread, uint flags)');
 const UnhookWinEvent = user32.func('bool __stdcall UnhookWinEvent(intptr hook)');
 
@@ -221,4 +222,5 @@ module.exports = {
   SWP, hwndOf, className, processOf, findDesktopLayers, findWorkerW, parentOf, rootOf, ownerOf, setOwner, nextWindow, styleOf, exStyleOf,
   attachToDesktop, detachFromDesktop, isDesktopChild, positionDesktopChild, desktopOrderIntact, restoreDesktopOrder, watchDesktop,
   isWindow, windowRect, setWindowPos, sendToBottom, cursorPos, isDesktopAt, leftButtonDown,
+  doubleClickTime: () => GetDoubleClickTime(),
 };

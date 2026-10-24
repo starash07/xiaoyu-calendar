@@ -67,8 +67,8 @@ const Settings = (() => {
             <section class="settings-card"><h3>桌面挂件</h3><p class="settings-intro" id="stW1State"></p>
               <div class="settings-actions"><button type="button" class="settings-action" id="stPin"></button><button type="button" class="settings-action" id="stResetPos">重置位置</button></div>
             </section>
-            <section class="settings-card"><label class="settings-toggle-row" for="stAuto"><span>开机自启</span><input class="settings-switch" type="checkbox" role="switch" id="stAuto"></label><p class="settings-intro">开机时自动打开小鱼。</p></section>
-            <div class="settings-about"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="settings-about-name">小鱼日程表 <small>0.1.0</small></span></div>
+            <section class="settings-card"><label class="settings-toggle-row" for="stAuto"><span>开机自启</span><input class="settings-switch" type="checkbox" role="switch" id="stAuto"></label><p class="settings-intro">开机时自动打开鱼鱼日程。</p></section>
+            <div class="settings-about"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="settings-about-name">鱼鱼日程 <small>0.1.0</small></span></div>
           </div>
         </div>
       </section>`;
@@ -107,11 +107,11 @@ const Settings = (() => {
     q('stBarWarn').hidden = ap.barHeight >= ap.barFontSize + 2;
   }
 
-  async function saveAp(patch, msg) {
+  async function saveAppearance(action, msg) {
     const revision = ++appearanceRevision;
     editingAppearance = false;
     let res;
-    try { res = await rc.saveSettings({ w1: { appearance: patch } }); }
+    try { res = await action(); }
     catch (_) { res = { ok: false }; }
     if (revision === appearanceRevision) {
       rc.previewAppearance(null);
@@ -120,6 +120,8 @@ const Settings = (() => {
     SettingsHost.report(res, msg || '已保存');
     return res;
   }
+
+  const saveAp = (patch, msg) => saveAppearance(() => rc.saveSettings({ w1: { appearance: patch } }), msg);
 
   async function saveAction(action, message) {
     let result;
@@ -168,7 +170,7 @@ const Settings = (() => {
         chooseTone(tones[next]);
       });
     });
-    q('stReset').addEventListener('click', () => saveAp(DEFAULT_AP, '已恢复默认外观'));
+    q('stReset').addEventListener('click', () => saveAppearance(() => rc.resetAppearance(), '已恢复默认外观和窗口大小'));
     q('stPin').addEventListener('click', () => {
       const pinned = state().w1.pinned;
       saveAction(() => rc.setPinned(!pinned), pinned ? '已解锁，可以拖动挂件了' : '已钉住');

@@ -1,7 +1,7 @@
 @echo off
 setlocal DisableDelayedExpansion
 chcp 65001 >nul
-title 小鱼日程表
+title 鱼鱼日程
 
 rem 始终从脚本所在目录启动，支持换电脑、换盘符和带空格的路径。
 pushd "%~dp0app" >nul 2>&1
@@ -35,7 +35,7 @@ for /f "usebackq delims=" %%P in (`powershell.exe -NoProfile -NonInteractive -Co
 :proxyReady
 if defined HTTPS_PROXY set "ELECTRON_GET_USE_PROXY=1"
 if defined HTTP_PROXY set "ELECTRON_GET_USE_PROXY=1"
-echo 首次运行或运行文件缺失，正在安装小鱼日程表所需的依赖。
+echo 首次运行或运行文件缺失，正在安装鱼鱼日程所需的依赖。
 echo 需要联网下载 Electron，请稍候，完成后会自动启动。
 if exist "package-lock.json" (
   call npm.cmd ci --include=dev
@@ -48,18 +48,20 @@ if not exist "node_modules\electron\path.txt" goto installFailed
 if not exist "node_modules\koffi\package.json" goto installFailed
 
 :launch
+where node.exe >nul 2>&1
+if errorlevel 1 goto needNode
 rem 避免从开发工具继承此变量后，把 Electron 当成普通 Node.js 运行。
 set "ELECTRON_RUN_AS_NODE="
-start "" /D "%CD%" "%CD%\node_modules\electron\dist\electron.exe" "%CD%" %*
+node.exe "scripts\launch-dev.cjs" %*
 if errorlevel 1 (
-  set "launchError=无法启动 Electron，请查看上方错误信息。"
+  set "launchError=测试版未能启动，请查看上方错误信息。"
   goto failed
 )
 popd
 exit /b 0
 
 :needNode
-set "launchError=首次运行需要 Node.js 22.12 或更高版本，请从 https://nodejs.org 安装后重新打开本文件。"
+set "launchError=启动测试版需要 Node.js 22.12 或更高版本，请从 https://nodejs.org 安装后重新打开本文件。"
 goto failed
 
 :installFailed
