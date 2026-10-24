@@ -14,7 +14,7 @@ Windows 桌面日程工具。桌面挂件随手看一眼，月历界面管一整
 
 ## 安装
 
-下载 Releases 里的 `鱼鱼日程-x.x.x-Setup.exe`，双击安装。
+到 [Releases](https://github.com/starash07/xiaoyu-calendar/releases) 下载 `yuyu-calendar-x.x.x-Setup.exe`，双击安装。
 
 > 安装包未签名，首次运行时 Windows SmartScreen 可能提示「已保护你的电脑」，
 > 点「更多信息」→「仍要运行」即可。
