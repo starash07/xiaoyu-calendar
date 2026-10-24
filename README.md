@@ -25,29 +25,3 @@ npm start
 ```
 
 需要 Windows 10/11 和 Node.js 22.12 或更高版本。
-
-## 数据与图标
-
-- 本机日程和设置：`app/.data/`
-- 快捷方式图标：`app/assets/icons/app-icon.ico`
-- 托盘图标：`app/assets/icons/tray-icon.png`
-
-请备份 `app/.data/` 后再迁移或清理项目。
-
-## 目录
-
-```text
-app/
-├─ assets/icons/     应用、快捷方式与托盘图标
-├─ main/             Electron 主进程、窗口、数据与托盘
-├─ preload/          页面与主进程的安全接口
-├─ renderer/         桌面挂件、主界面、设置和共享样式
-├─ scripts/          项目检查脚本
-├─ package.json      依赖与启动命令
-└─ package-lock.json 锁定依赖版本
-
-README.md            项目说明
-启动日程挂件.cmd      Windows 启动入口
-```
-
-依赖、缓存和本机数据不会提交到 Git。
