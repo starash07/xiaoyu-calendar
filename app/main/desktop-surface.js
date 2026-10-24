@@ -127,6 +127,7 @@ class DesktopSurface {
 
   // 只根据自己的可见位调用一次 ShowWindow；父窗口隐藏时不反复 show。
   show() { if (this.hwnd && this.metrics.frames && !(W.styleOf(this.hwnd) & 0x10000000)) show(this.hwnd, 8); }
+  hide() { if (this.hwnd && (W.styleOf(this.hwnd) & 0x10000000)) show(this.hwnd, 0); }
   isVisible() { return !!this.hwnd && !!visible(this.hwnd); }
 
   freeBuffer() {

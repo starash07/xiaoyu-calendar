@@ -1,5 +1,5 @@
 // W1：隐藏网页负责排版，原生透明窗口负责显示；桌面检查与悬停互不触发。
-const { BrowserWindow, screen } = require('electron');
+const { BrowserWindow, screen, nativeImage } = require('electron');
 const path = require('path');
 const W = require('./win32');
 const P = require('./paths');
@@ -21,6 +21,8 @@ class W1 {
     this.appearancePreview = null;
     this.win = null;
     this.surface = null;
+    this.pinControl = null;
+    this.pinRect = null;
     this.hwnd = 0;
     this.embedded = false;
     this.degraded = false;
@@ -54,6 +56,7 @@ class W1 {
       x: this.pos.x, y: this.pos.y, width: this.size.w, height: this.size.h,
       frame: false, transparent: true, backgroundColor: '#00000000', resizable: false, movable: false,
       minimizable: false, maximizable: false, skipTaskbar: true, hasShadow: false, thickFrame: false, show: false,
+      icon: P.ICON_PNG,
       focusable: false,
       webPreferences: { preload: P.PRELOAD, backgroundThrottling: false, offscreen: true },
     });
@@ -84,6 +87,9 @@ class W1 {
       this.desktopLayers = null;
       this.surface?.destroy();
       this.surface = null;
+      this.pinControl?.destroy();
+      this.pinControl = null;
+      this.pinControlGeometry = null;
       this.lastFrame = null;
       this.glass.reset();
       clearTimeout(this.recoverTimer);
@@ -146,7 +152,70 @@ class W1 {
     this.metrics.placements++;
     if (this.lastFrame) this.surface.paint(this.lastFrame);
     this.applyGlass();
+    this.syncPinControl();
     return true;
+  }
+
+  // 钉住的主画面完全穿透；仅在按钮矩形上放一个不激活的原生点击层。
+  // 它属于现有图标宿主，正常应用窗口仍能遮住它，其他桌面位置保持原样。
+  reportControls(controls) {
+    const r = controls?.pin;
+    if (!r || !['x', 'y', 'width', 'height'].every(key => Number.isFinite(r[key]))
+      || r.x < 0 || r.y < 0 || r.width <= 0 || r.height <= 0 || r.width > 128 || r.height > 128
+      || r.x + r.width > this.size.w + 1 || r.y + r.height > this.size.h + 1) {
+      this.pinRect = null;
+    } else this.pinRect = { x: r.x, y: r.y, width: r.width, height: r.height };
+    this.syncPinControl();
+  }
+
+  syncPinControl() {
+    if (!this.ready || !this.pinned || !this.embedded || !this.pinRect || this.quitting) {
+      this.pinControl?.hide();
+      return;
+    }
+    const layers = { ...this.desktopLayers, host: this.desktopLayers.icons, after: 0 };
+    if (!this.native.isWindow(layers.host)) { this.pinControl?.hide(); return; }
+    if (!this.pinControl?.hwnd) {
+      this.pinControl?.destroy();
+      this.pinControl = new DesktopSurface({
+        onInput: input => {
+          if (!this.pinned || !this.embedded || !this.pinRect || !this.win || this.win.isDestroyed()) return;
+          const point = input.type === 'mouseLeave' ? { x: -1, y: -1 } : {
+            x: Math.round(input.x + this.pinRect.x), y: Math.round(input.y + this.pinRect.y),
+          };
+          this.win.webContents.sendInputEvent({ ...input, ...point });
+        },
+        onLost: () => {
+          this.pinControlGeometry = null;
+          if (!this.quitting) this.scheduleRecovery('pin-control-lost');
+        },
+      });
+      this.pinControl.setClickThrough(false);
+      this.pinControlGeometry = null;
+    }
+    const control = this.pinControl;
+    if (!this.native.isDesktopChild(control.hwnd, layers)) {
+      control.hide();
+      if (!this.native.attachToDesktop(control.hwnd, layers)) return;
+      this.pinControlGeometry = null;
+    }
+    if (!this.native.desktopOrderIntact(control.hwnd, layers)) this.native.restoreDesktopOrder(control.hwnd, layers);
+    const b = this.bounds(), r = this.pinRect;
+    const physical = screen.dipToScreenRect(null, {
+      x: b.x + r.x, y: b.y + r.y, width: r.width, height: r.height,
+    });
+    const geometry = [layers.host, physical.x, physical.y, physical.width, physical.height].join(':');
+    if (geometry !== this.pinControlGeometry) {
+      control.scale = screen.getDisplayNearestPoint(this.pos).scaleFactor;
+      if (!this.native.positionDesktopChild(control.hwnd, layers, physical)) { control.hide(); return; }
+      control.expectedSize = { width: physical.width, height: physical.height };
+      const pixels = Buffer.alloc(physical.width * physical.height * 4);
+      // 非零 alpha 保留矩形命中区；按钮仍由原网页绘制，不叠画第二遍。
+      for (let i = 3; i < pixels.length; i += 4) pixels[i] = 1;
+      if (!control.paint(nativeImage.createFromBitmap(pixels, control.expectedSize))) { control.hide(); return; }
+      this.pinControlGeometry = geometry;
+    }
+    if (!this.hidden) control.show();
   }
 
   embed(createHost = false) {
@@ -181,6 +250,7 @@ class W1 {
 
   // 挂靠失败：退回成置底的普通窗口，只提示一次。
   degrade() {
+    this.pinControl?.hide();
     this.embedded = false;
     this.desktopLayers = null;
     this.native.detachFromDesktop(this.hwnd);
@@ -203,10 +273,11 @@ class W1 {
     this.embedded = false;
     this.degraded = false;
     this.desktopLayers = null;
+    this.pinControl?.hide();
     this.surface.setClickThrough(false);
     if (!this.place()) return false;
-    // 先解除桌面挂靠并重新定位，再恢复摆放时的置顶。
-    this.surface.setTopmost(true);
+    // 解锁后使用普通窗口层级，允许其他应用遮挡。
+    this.surface.setTopmost(false);
     this.applyGlass();
     return true;
   }
@@ -234,7 +305,9 @@ class W1 {
     const moved = !this.lastPt || pt.x !== this.lastPt.x || pt.y !== this.lastPt.y;
     this.lastPt = pt;
     const r = this.native.windowRect(this.hwnd);
-    const inside = !!r && pt.x >= r.left && pt.x < r.right && pt.y >= r.top && pt.y < r.bottom && this.native.isDesktopAt(pt, this.hwnd);
+    const ownControl = this.pinControl?.hwnd;
+    const inside = !!r && pt.x >= r.left && pt.x < r.right && pt.y >= r.top && pt.y < r.bottom
+      && (this.native.isDesktopAt(pt, this.hwnd) || (!!ownControl && this.native.isDesktopAt(pt, ownControl)));
     // 鼠标静止时也检查遮挡，切到工作窗口后应收起原来的详情。
     if (!moved && inside === this.lastInside) return;
     if (inside) {
@@ -279,6 +352,7 @@ class W1 {
       if (this.embedded && this.native.isDesktopChild(this.hwnd, this.desktopLayers)) {
         if (!this.native.desktopOrderIntact(this.hwnd, this.desktopLayers)
           && this.native.restoreDesktopOrder(this.hwnd, this.desktopLayers)) this.metrics.orderRepairs++;
+        this.syncPinControl();
         return;
       }
       this.metrics.recoveries++;
@@ -293,6 +367,7 @@ class W1 {
   checkHealth() {
     if (!this.win || !this.ready) return;
     if (this.pinned && (!this.embedded || !this.native.desktopOrderIntact(this.hwnd, this.desktopLayers))) this.scheduleRecovery('health-check');
+    if (this.pinned && this.pinRect) this.syncPinControl();
     this.ensureOnScreen(true);
   }
 
@@ -377,6 +452,8 @@ class W1 {
     this.stopWatching?.();
     this.stopWatching = null;
     this.lastFrame = null;
+    this.pinControl?.destroy();
+    this.pinControl = null;
     this.surface?.destroy();
     this.surface = null;
     if (this.win && !this.win.isDestroyed()) this.win.destroy();

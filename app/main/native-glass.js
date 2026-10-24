@@ -43,8 +43,7 @@ class NativeGlass {
     const modeKey = `${hwnd}/${mode}/${desktopChild}`;
     // 原生表面直接提交网页的透明像素，圆角由这一帧的 alpha 统一决定。
     // 旧 Accent 材质不能混入该表面的提交路径；真实磨砂后端尚待接入。
-    if (surface) return this.status = mode === 'none' ? { mode: 'none', available: true }
-      : { mode: 'none', available: false, reason: 'desktop-surface' };
+    if (surface) return this.status = { mode: 'none', available: false, reason: 'desktop-surface' };
     // Aero Peek 与真正的显示桌面分开处理；本属性避免鼠标停在桌面按钮时玻璃被淡出。
     const peekKey = `${hwnd}/${pinned}/${desktopChild}`;
     if (!desktopChild && (force || peekKey !== this.peekKey)) {
@@ -67,8 +66,7 @@ class NativeGlass {
     // 接口，必须明确报告不可用，不能再次退回顶层窗口来换取磨砂。
     if (desktopChild) {
       this.modeKey = modeKey;
-      return this.status = mode === 'none' ? { mode: 'none', available: true }
-        : { mode: 'none', available: false, reason: 'desktop-child' };
+      return this.status = { mode: 'none', available: false, reason: 'desktop-child' };
     }
     if (force || modeKey !== this.modeKey) {
       let ok = false;

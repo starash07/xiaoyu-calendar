@@ -2,7 +2,7 @@
 const Settings = (() => {
   const page = $('settings');
   const q = id => document.getElementById(id);
-  let isOpenFlag = false, closing = false, closeTimer = null;
+  let isOpenFlag = false, closing = false, popupMotion = null;
   let editingAppearance = false, appearanceRevision = 0;
   let releaseDrag = null;
   const A = RCDesktopAppearance;
@@ -12,12 +12,11 @@ const Settings = (() => {
     ['panelOpacity', '玻璃不透明度', ...A.LIMITS.panelOpacity, v => `${v}%`],
     ['width', '挂件宽度', ...A.LIMITS.width, v => `${v}px`],
     ['dateFontSize', '日期字号', ...A.LIMITS.dateFontSize, v => `${v}px`],
-    ['blur', '磨砂强度', ...A.LIMITS.blur, v => v === 0 ? '关闭' : String(v)],
     ['barFontSize', '日程条字号', ...A.LIMITS.barFontSize, v => `${v}px`],
-    ['barHeight', '日程条高度', ...A.LIMITS.barHeight, v => `${v}px`],
+    ['detailFontSize', '详情字号', ...A.LIMITS.detailFontSize, v => `${v}px`],
   ];
   const sliderRows = rows => rows.map(([k, name, min, max, step]) => `<div class="settings-control">
-    <div class="control-heading"><span class="control-label"><label for="st_${k}">${name}</label>${k === 'blur' ? `<button type="button" class="settings-help" id="stGlassWarn" aria-label="磨砂说明"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.3"/><path d="M7.9 7.5a2.15 2.15 0 0 1 4.2.6c0 1.5-2.1 1.7-2.1 3.2"/><path d="M10 14h.01"/></svg></button>` : ''}</span><output id="st_${k}_out" for="st_${k}"></output></div>
+    <div class="control-heading"><span class="control-label"><label for="st_${k}">${name}</label></span><output id="st_${k}_out" for="st_${k}"></output></div>
     <input type="range" id="st_${k}" min="${min}" max="${max}" step="${step}"></div>`).join('');
   const state = () => SettingsHost.state();
 
@@ -34,28 +33,24 @@ const Settings = (() => {
         </nav>
         <div class="settings-scroll">
           <div class="settings-panel" id="stPanelAppearance" role="tabpanel" aria-labelledby="stTabAppearance">
-            <h3 class="settings-group-title">日历与日程</h3>
+            <div class="settings-grid settings-grid-fonts">${sliderRows(SLIDERS.slice(2))}</div>
+            <p class="settings-notice" id="stBarWarn" hidden>字号偏大，日程条文字可能被裁切。</p>
             <div class="settings-grid">
-              ${sliderRows(SLIDERS.slice(2, 3))}
-              <div class="settings-today">
-                <span id="stTodayLabel">主面板当天底色</span>
-                <div class="today-tones" role="radiogroup" aria-labelledby="stTodayLabel">
-                  ${A.TODAY_TONES.map(tone => `<button type="button" class="today-tone" id="st_today_${tone.id}" role="radio" aria-checked="false" tabindex="-1" aria-label="${tone.label}" title="${tone.label}" data-tone="${tone.id}" style="--tone-fill:${tone.fill};--tone-ink:${tone.ink}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 8 2.5 2.5L12 5"/></svg></button>`).join('')}
-                </div>
+              <label class="settings-color" for="st_textColor"><span>文字颜色</span><input type="color" id="st_textColor"></label>
+              <label class="settings-color" for="st_weekendColor"><span>周末文字</span><input type="color" id="st_weekendColor"></label>
+            </div>
+            <div class="settings-today settings-today-colors">
+              <span id="stTodayLabel">主面板当天底色</span>
+              <div class="today-tones" role="radiogroup" aria-labelledby="stTodayLabel">
+                ${A.TODAY_TONES.map(tone => `<button type="button" class="today-tone" id="st_today_${tone.id}" role="radio" aria-checked="false" tabindex="-1" aria-label="${tone.label}" title="${tone.label}" data-tone="${tone.id}" style="--tone-fill:${tone.fill};--tone-ink:${tone.ink}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 8 2.5 2.5L12 5"/></svg></button>`).join('')}
               </div>
             </div>
-            <div class="settings-grid">
-              <label class="settings-color" for="st_weekendColor"><span>周末文字</span><input type="color" id="st_weekendColor"></label>
-              <label class="settings-color" for="st_textColor"><span>文字颜色</span><input type="color" id="st_textColor"></label>
-            </div>
-            <div class="settings-grid">${sliderRows(SLIDERS.slice(4))}</div>
-            <p class="settings-notice" id="stBarWarn" hidden>条高太小，文字可能被裁切。</p>
             <h3 class="settings-group-title">桌面挂件 <span>仅桌面生效</span></h3>
-            <div class="settings-grid">${sliderRows(SLIDERS.slice(0, 2))}</div>
             <div class="settings-grid">
-              <label class="settings-color" for="st_panelColor"><span>玻璃底色</span><input type="color" id="st_panelColor"></label>
-              ${sliderRows(SLIDERS.slice(3, 4))}
+              ${sliderRows(SLIDERS.slice(1, 2))}
+              ${sliderRows(SLIDERS.slice(0, 1))}
             </div>
+            <label class="settings-color" for="st_panelColor"><span>玻璃底色</span><input type="color" id="st_panelColor"></label>
           </div>
           <div class="settings-panel" id="stPanelReminder" role="tabpanel" aria-labelledby="stTabReminder" hidden>
             <p class="settings-intro">新建日程默认使用这些提醒，也可以在每个日程里单独调整。</p>
@@ -95,7 +90,8 @@ const Settings = (() => {
 
   // 读取全部外观字段，切换分类不会丢失当前值。
   function current() {
-    const ap = Object.fromEntries(COLOR_KEYS.map(key => [key, q(`st_${key}`).value.toUpperCase()]));
+    const ap = { ...A.normalize(state().settings.w1.appearance),
+      ...Object.fromEntries(COLOR_KEYS.map(key => [key, q(`st_${key}`).value.toUpperCase()])) };
     ap.todayTone = page.querySelector('.today-tone[aria-checked=true]')?.dataset.tone || DEFAULT_AP.todayTone;
     for (const [k] of SLIDERS) ap[k] = +q(`st_${k}`).value;
     return ap;
@@ -108,10 +104,6 @@ const Settings = (() => {
       button.setAttribute('aria-checked', String(selected));
       button.tabIndex = selected ? 0 : -1;
     });
-    const glassHelp = state().w1.glass?.available === false
-      ? '桌面磨砂尚未启用，选择的效果会保留。' : '拖动调整磨砂强度，0 为关闭。';
-    q('stGlassWarn').title = glassHelp;
-    q('stGlassWarn').setAttribute('aria-label', `磨砂说明：${glassHelp}`);
     q('stBarWarn').hidden = ap.barHeight >= ap.barFontSize + 2;
   }
 
@@ -220,22 +212,30 @@ const Settings = (() => {
 
   function open() {
     if (!state()) return;
-    clearTimeout(closeTimer);
-    closeTimer = null;
+    const reopening = closing;
     closing = false;
     page.classList.remove('is-closing');
-    if (isOpenFlag) { page.querySelector('.settings-sheet').focus({ preventScroll: true }); return; }
+    if (isOpenFlag) {
+      const sheet = page.querySelector('.settings-sheet');
+      sheet.inert = false;
+      if (reopening) popupMotion?.open();
+      sheet.focus({ preventScroll: true });
+      return;
+    }
     isOpenFlag = true;
     page.hidden = false;
     build();
-    releaseDrag = SettingsHost.enableDragging(page.querySelector('.settings-sheet'));
+    const sheet = page.querySelector('.settings-sheet');
+    releaseDrag = SettingsHost.enableDragging(sheet);
+    popupMotion = new RCPopupMotion(sheet);
+    popupMotion.open();
     // 初始焦点落在对话框，避免刚打开就给关闭按钮画出键盘焦点环。
-    page.querySelector('.settings-sheet').focus({ preventScroll: true });
+    sheet.focus({ preventScroll: true });
   }
 
   function finishClose() {
-    clearTimeout(closeTimer);
-    closeTimer = null;
+    popupMotion?.cancel();
+    popupMotion = null;
     isOpenFlag = closing = false;
     releaseDrag?.();
     releaseDrag = null;
@@ -252,9 +252,13 @@ const Settings = (() => {
     editingAppearance = false;
     appearanceRevision++;
     rc.previewAppearance(null);
-    if (!animate || matchMedia('(prefers-reduced-motion: reduce)').matches) { finishClose(); return; }
+    if (!animate || !popupMotion) { finishClose(); return; }
     page.classList.add('is-closing');
-    closeTimer = setTimeout(finishClose, 150);
+    page.querySelector('.settings-sheet').inert = true;
+    const motion = popupMotion;
+    motion.close().then(completed => {
+      if (completed && closing && popupMotion === motion) finishClose();
+    });
   }
 
   // 空白处不再关闭设置；保留关闭按钮和 Esc。

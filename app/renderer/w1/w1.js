@@ -1,4 +1,4 @@
-// W1 桌面挂件页面：只显示当月未完成的日程；只响应悬停，悬停时详情在日历下方浮现
+// W1 桌面挂件页面：未完成日程、悬停详情，以及位置锁定和拖动控件。
 const D = RCDates, C = RCColors, K = RCCal, A = RCDesktopAppearance;
 const $ = id => document.getElementById(id);
 const panel = $('panel'), cal = $('cal'), detail = $('detail'), tint = $('tint');
@@ -10,6 +10,7 @@ let preview = null;    // 设置页拖滑块时的临时外观
 let hoverId = null;
 let calendarKey = '', detailKey = '', hideTimer = null;
 let sizeFrame = 0, lastSize = '', calendarWidth = 0, calendarSizeFrame = 0;
+let lastControls = '', controlErrorTimer = null;
 let detailHeightReserve = 0, detailMotionTimer = null;
 let pendingDetailReveal = false, detailRevealFrame = 0;
 let cursor = { x: -1, y: -1 };
@@ -20,6 +21,7 @@ function applyAppearance() {
   const ap = appearance();
   panel.style.setProperty('--w', `${ap.width}px`);
   panel.style.setProperty('--date-size', `${ap.dateFontSize}px`);
+  panel.style.setProperty('--detail-font-size', `${ap.detailFontSize}px`);
   tint.style.background = C.rgba(ap.panelColor, ap.panelOpacity / 100);
   panel.style.setProperty('--fg', ap.textColor);
   panel.style.setProperty('--fg2', C.rgba(ap.textColor, .72));
@@ -156,8 +158,10 @@ function setHover(id) {
 function hitTest(x, y) {
   cursor = { x, y };
   cal.querySelector('.cal-dc.hov')?.classList.remove('hov');
+  $('pinBtn').classList.remove('hov');
   if (x < 0 || panel.classList.contains('dragging')) { setHover(null); $('flagTip').hidden = true; return; }
   const el = document.elementFromPoint(x, y);
+  $('pinBtn').classList.toggle('hov', !!el?.closest('#pinBtn'));
   const bar = el && el.closest('.cal-bar');
   if (bar) setHover(bar.dataset.id);
   else if (hoverId && !hideTimer) hideTimer = setTimeout(() => setHover(null), 100);
@@ -174,6 +178,10 @@ function reportSize() {
     const w = Math.ceil(r.width + margin * 2), h = Math.ceil(Math.max(r.height, detailHeightReserve) + margin * 2);
     const key = `${w}/${h}`;
     if (key !== lastSize) { lastSize = key; rc.reportSize(w, h); }
+    const pin = $('pinBtn').getBoundingClientRect();
+    const controls = { pin: { x: pin.x, y: pin.y, width: pin.width, height: pin.height } };
+    const controlKey = JSON.stringify(controls);
+    if (controlKey !== lastControls) { lastControls = controlKey; rc.reportW1Controls?.(controls); }
   });
 }
 new ResizeObserver(reportSize).observe(panel);
@@ -197,24 +205,34 @@ rc.onW1Info(i => {
   panel.classList.toggle('loose', i.loose);
   panel.classList.toggle('dragging', !!i.dragging);
   panel.setAttribute('aria-label', i.loose ? '可以拖动的桌面日历' : '已钉住的桌面日历');
+  $('pinBtn').setAttribute('aria-label', i.loose ? '钉住位置' : '解锁位置');
+  $('pinBtn').title = i.loose ? '钉住位置' : '解锁位置';
   if (placementChanged) hitTest(-1, -1);
   reportSize();
 });
 
 panel.addEventListener('mousemove', e => { if (info && !info.embedded) hitTest(e.clientX, e.clientY); });
 panel.addEventListener('mouseleave', () => { if (info && !info.embedded) hitTest(-1, -1); });
-// 只拖上方提示条，查看日程时不会误把整个挂件拖走。
+// 只有上方玻璃长条用于拖动。
 $('dragHandle').addEventListener('mousedown', e => {
   if (!info || !info.loose || e.button !== 0 || e.target.closest('button')) return;
   hitTest(-1, -1);
   rc.w1Drag();
 });
 $('pinBtn').addEventListener('click', async () => {
+  if (!info || $('pinBtn').disabled) return;
   $('pinBtn').disabled = true;
+  clearTimeout(controlErrorTimer);
+  $('controlError').hidden = true;
+  const showError = message => {
+    $('controlError').textContent = message || '保存失败，请再试一次';
+    $('controlError').hidden = false;
+    controlErrorTimer = setTimeout(() => { $('controlError').hidden = true; }, 4000);
+  };
   try {
-    const res = await rc.setPinned(true);
-    $('placementNote').textContent = res.ok ? '拖动摆放位置' : (res.error || '保存失败，请再试一次');
-  } catch (_) { $('placementNote').textContent = '保存失败，请再试一次'; }
+    const res = await rc.setPinned(info.loose);
+    if (!res.ok) showError(res.error);
+  } catch (_) { showError('保存失败，请再试一次'); }
   finally { $('pinBtn').disabled = false; }
 });
 

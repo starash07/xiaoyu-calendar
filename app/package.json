@@ -1,9 +1,9 @@
 {
   "name": "richeng-guajian",
-  "productName": "日程挂件",
+  "productName": "小鱼日程表",
   "version": "0.1.0",
   "private": true,
-  "description": "桌面日程挂件 Demo：W1 桌面挂件 + W2 下拉窗",
+  "description": "Windows 桌面日程工具：桌面挂件、月历主界面与系统托盘",
   "main": "main/main.js",
   "scripts": {
     "start": "electron .",
@@ -16,7 +16,6 @@
     "selftest:task-dialog": "electron scripts/check-task-dialog.cjs --selftest",
     "selftest:settings": "electron scripts/check-settings.cjs --selftest",
     "selftest:panel-motion": "node scripts/check-panel-motion.cjs",
-    "preview:main": "node scripts/preview-main.js --serve",
     "postinstall": "node node_modules/electron/install.js"
   },
   "devDependencies": {

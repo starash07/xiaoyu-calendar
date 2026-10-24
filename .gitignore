@@ -2,7 +2,7 @@
 app/node_modules/
 .cache/
 
-# Demo 运行时数据（本机日程、Electron 自身缓存、自测截图）
+# 运行时数据（本机日程、Electron 缓存、自测输出）
 app/.data/
 app/.data-selftest/
 

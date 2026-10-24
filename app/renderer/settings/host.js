@@ -14,28 +14,32 @@ const SettingsHost = {
   closed: () => rc.closeSettings(),
   enableDragging(sheet) {
     const header = sheet.querySelector('.settings-header');
+    const tabs = sheet.querySelector('.settings-tabs');
     let drag = null, layoutFrame = 0;
-    const place = (x, y) => {
-      const box = sheet.getBoundingClientRect();
-      const left = Math.max(20, Math.min(x, innerWidth - box.width - 20));
-      const top = Math.max(24, Math.min(y, innerHeight - box.height - 24));
+    let position = { left: sheet.offsetLeft, top: sheet.offsetTop };
+    const place = (x, y, dragging = false) => {
+      const left = Math.max(20, Math.min(x, innerWidth - sheet.offsetWidth - 20));
+      const minHeight = Math.min(sheet.offsetHeight, header.offsetHeight + tabs.offsetHeight + 48);
+      const height = dragging ? sheet.offsetHeight : minHeight;
+      const top = Math.max(24, Math.min(y, innerHeight - height - 24));
+      position = { left, top };
       sheet.style.setProperty('--settings-x', `${left}px`);
       sheet.style.setProperty('--settings-y', `${top}px`);
       sheet.classList.add('is-positioned');
     };
+    // 首次居中后固定左上角；切换分类只改变底边，超出剩余空间时滚动内容。
+    place(position.left, position.top);
     const keepVisible = () => {
-      if (layoutFrame || !sheet.classList.contains('is-positioned')) return;
+      if (layoutFrame) return;
       layoutFrame = requestAnimationFrame(() => {
         layoutFrame = 0;
-        const box = sheet.getBoundingClientRect();
-        place(box.left, box.top);
+        place(position.left, position.top);
       });
     };
     const down = event => {
       if (event.button !== 0 || !event.isPrimary || event.target.closest('button, input, select, a')) return;
       event.preventDefault();
-      const box = sheet.getBoundingClientRect();
-      drag = { id: event.pointerId, x: event.clientX, y: event.clientY, left: box.left, top: box.top };
+      drag = { id: event.pointerId, x: event.clientX, y: event.clientY, ...position };
       header.setPointerCapture(event.pointerId);
     };
     const move = event => {
@@ -43,7 +47,7 @@ const SettingsHost = {
       const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
       if (!sheet.classList.contains('is-dragging') && Math.hypot(dx, dy) < 4) return;
       sheet.classList.add('is-dragging');
-      place(drag.left + dx, drag.top + dy);
+      place(drag.left + dx, drag.top + dy, true);
     };
     const end = () => {
       if (!drag) return;
@@ -79,8 +83,8 @@ rc.onSettingsReopen(() => Settings.open());
 addEventListener('DOMContentLoaded', async () => {
   try {
     settingsState = await rc.getState();
-    Settings.open();
     await document.fonts.ready;
+    // 先让原生窗口显示，再由 settings:reopen 开始完整的展开动画。
     requestAnimationFrame(() => rc.settingsReady());
   } catch (_) { rc.closeSettings(); }
 });

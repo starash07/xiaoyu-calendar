@@ -30,14 +30,18 @@
         <span class="month-label" id="monthLabel"></span>
         <button class="month-step" id="nextBtn" type="button" title="下一月（PageDown）" aria-label="下一月"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button>
       </div>
-      <button class="today-button" id="todayBtn" type="button">回到今天</button>
       <button class="new-button" id="newBtn" type="button" title="新建日程（Ctrl+N）"><span aria-hidden="true">＋</span>新建日程</button>
+      <button class="today-button" id="todayBtn" type="button" title="回到今天" aria-label="回到今天">今</button>
     </section>
 
     <div class="content">
       <div class="calwrap" id="calwrap">
-        <div id="cal"></div>
-        <div class="empty" id="empty" hidden>这个月还是空白的。<button id="emptyNewBtn" type="button">记下第一件事</button></div>
+        <div class="month-stage" id="monthStage">
+          <div class="month-page" id="monthPage">
+            <div id="cal"></div>
+            <div class="empty" id="empty" hidden>这个月还是空白的。<button id="emptyNewBtn" type="button">记下第一件事</button></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -58,6 +62,7 @@
 <script src="../shared/dates.js"></script>
 <script src="../shared/colors.js"></script>
 <script src="../shared/appearance.js"></script>
+<script src="../shared/popup-motion.js"></script>
 <script src="../shared/calendar.js"></script>
 <script src="w2.js"></script>
 <script src="dialog.js"></script>

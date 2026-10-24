@@ -1,5 +1,6 @@
 # 统一换行：仓库里一律存成 LF，避免两边换行符不同导致整篇显示被改过
 * text=auto
+*.cmd text eol=crlf
 *.png binary
 *.jpg binary
 *.ico binary

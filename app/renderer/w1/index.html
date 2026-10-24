@@ -12,13 +12,20 @@
   <div class="tint" id="tint" aria-hidden="true"></div>
   <div class="sheen" aria-hidden="true"></div>
   <div class="content">
-    <div class="loose-bar" id="dragHandle"><span id="placementNote">拖动摆放位置</span><button id="pinBtn" type="button">钉住</button></div>
+    <div class="loose-bar" id="dragHandle" aria-label="按住拖动窗口"><span class="drag-glow" aria-hidden="true"></span><span class="drag-label">按住拖动窗口</span></div>
     <div class="head">
       <div class="month-heading" id="title"><strong id="month"></strong><span id="year"></span></div>
-      <span class="flag" id="flag" hidden aria-describedby="flagTip">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
-        <span id="flagCount"></span>
-      </span>
+      <div class="head-actions">
+        <span class="flag" id="flag" hidden aria-describedby="flagTip">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
+          <span id="flagCount"></span>
+        </span>
+        <button class="pin-button" id="pinBtn" type="button" aria-label="解锁位置" title="解锁位置">
+          <svg class="pin-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="none" d="M7 10V7a5 5 0 0 1 10 0v3h-2V7a3 3 0 0 0-6 0v3Z"/><path fill="currentColor" stroke="none" fill-rule="evenodd" d="M6.5 10h11a2.5 2.5 0 0 1 2.5 2.5v7a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 19.5v-7A2.5 2.5 0 0 1 6.5 10ZM12 13a1.5 1.5 0 0 1 1 2.62V18a1 1 0 0 1-2 0v-2.38A1.5 1.5 0 0 1 12 13Z"/></svg>
+          <svg class="unlock-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="none" d="M7 10V7a5 5 0 0 1 9.6-2 1 1 0 1 1-1.84.8A3 3 0 0 0 9 7v3Z"/><path fill="currentColor" stroke="none" fill-rule="evenodd" d="M6.5 10h11a2.5 2.5 0 0 1 2.5 2.5v7a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 19.5v-7A2.5 2.5 0 0 1 6.5 10ZM12 13a1.5 1.5 0 0 1 1 2.62V18a1 1 0 0 1-2 0v-2.38A1.5 1.5 0 0 1 12 13Z"/></svg>
+        </button>
+      </div>
+      <div class="control-error" id="controlError" hidden role="status"></div>
       <div class="flag-tip" id="flagTip" hidden role="tooltip">有待确认提醒<span>请到主窗口查看</span></div>
     </div>
     <div id="cal" aria-label="本月日程"></div>

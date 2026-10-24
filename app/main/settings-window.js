@@ -22,8 +22,10 @@ class SettingsWindow {
 
   open() {
     if (this.win && !this.win.isDestroyed()) {
-      this.send('settings:reopen');
-      if (this.ready && !this.hidden) { this.win.show(); this.win.focus(); }
+      if (this.ready) {
+        if (!this.hidden) { this.win.show(); this.win.focus(); }
+        this.send('settings:reopen');
+      }
       return { ok: true };
     }
     this.panel.setSettingsOpen(true);
@@ -32,10 +34,11 @@ class SettingsWindow {
       const display = screen.getDisplayMatching(this.panel.win.getBounds());
       this.displayId = display.id;
       const win = this.win = new BrowserWindow({
-        ...display.workArea, parent: this.panel.win, modal: false,
+        ...display.workArea, parent: this.panel.win, modal: false, alwaysOnTop: false,
         frame: false, transparent: true, backgroundColor: '#00000000',
         hasShadow: false, roundedCorners: false, resizable: false, movable: false,
         minimizable: false, maximizable: false, fullscreenable: false, skipTaskbar: true, show: false,
+        icon: P.ICON_PNG,
         webPreferences: { preload: P.PRELOAD, backgroundThrottling: false, offscreen: this.hidden },
       });
       win.setMenu(null);
@@ -67,6 +70,7 @@ class SettingsWindow {
     this.timeout = null;
     this.ready = true;
     if (!this.hidden) { this.win.show(); this.win.focus(); }
+    this.send('settings:reopen');
   }
 
   fail(win) {

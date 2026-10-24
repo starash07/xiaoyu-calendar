@@ -6,12 +6,12 @@
   const VERSION = 2;
   const DEFAULT = Object.freeze({
     panelColor: '#FFFFFF', panelOpacity: 14, blur: 14, textColor: '#315873',
-    width: 420, dateFontSize: 17, barFontSize: 10, barHeight: 15,
+    width: 420, dateFontSize: 17, barFontSize: 10, barHeight: 15, detailFontSize: 11,
     weekendColor: '#8A70D6', todayTone: 'mint',
   });
   const LIMITS = Object.freeze({
     panelOpacity: [0, 100, 1], width: [320, 600, 10], dateFontSize: [13, 22, 1],
-    blur: [0, 40, 1], barFontSize: [7, 12, 0.5], barHeight: [6, 18, 1],
+    blur: [0, 40, 1], barFontSize: [7, 12, 0.5], barHeight: [6, 18, 1], detailFontSize: [9, 20, 1],
   });
   const GLASS_LEVELS = Object.freeze([
     { value: 0, label: '关闭' }, { value: 14, label: '轻磨砂' }, { value: 40, label: '柔雾' },

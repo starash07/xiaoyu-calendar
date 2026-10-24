@@ -37,7 +37,8 @@ class W2 {
     if (this.dock) this.dockDisplayId = screen.getDisplayMatching(b).id;
     const win = this.win = new BrowserWindow({
       ...b, minWidth: 380, minHeight: MIN_HEIGHT, frame: false, transparent: true, hasShadow: true, resizable: true, skipTaskbar: true, show: false,
-      alwaysOnTop: !!this.dock, backgroundColor: '#00000000',
+      icon: P.ICON_PNG,
+      alwaysOnTop: !!this.dock && !this.settingsOpen, backgroundColor: '#00000000',
       webPreferences: { preload: P.PRELOAD, backgroundThrottling: false },
     });
     win.setMenu(null);
@@ -175,6 +176,7 @@ class W2 {
     this.collapsed = true;
     this.autoCollapsing = automatic;
     this.leaveSince = 0;
+    this.send('w2:retracted');
     this.animate(this.dockBounds(true), 160, easeOut);
   }
 
@@ -190,6 +192,8 @@ class W2 {
   setSettingsOpen(open) {
     this.settingsOpen = !!open;
     this.leaveSince = 0;
+    // 设置打开时主面板也使用普通层级，避免遮住设置或让设置跟随置顶。
+    if (this.win && !this.win.isDestroyed()) this.win.setAlwaysOnTop(!!this.dock && !this.settingsOpen);
     if (open) this.expand();
     this.send('settings:visibility', this.settingsOpen);
   }
@@ -217,11 +221,11 @@ class W2 {
     if (hit) {
       this.dock = hit.edge;
       this.dockDisplayId = hit.displayId;
-      this.win.setAlwaysOnTop(true);
+      this.win.setAlwaysOnTop(!this.settingsOpen);
       this.setBounds(this.dockBounds(false));
     } else if (this.dock) {
       this.dock = null;
-      this.win.setAlwaysOnTop(false);   // 浮动时不置顶（待确认），可以被其他窗口遮挡
+      this.win.setAlwaysOnTop(false);   // 浮动时可以被其他窗口遮挡。
     }
     this.updateLayoutLimit();
     this.saveBounds();
@@ -267,7 +271,11 @@ class W2 {
     if (!this.win) return;
     this.onHide?.();
     this.send('w2:cmd', { type: 'discard' });
-    if (this.dock) this.collapse(); else this.win.hide();
+    if (this.dock) this.collapse();
+    else {
+      this.send('w2:retracted');
+      this.win.hide();
+    }
   }
 
   toggle() { if (this.isShown()) this.hide(); else this.show(); }

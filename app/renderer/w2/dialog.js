@@ -7,6 +7,8 @@ const TaskDialog = (() => {
   let confirmCtx = null;   // { id }
   let layoutObserver = null;
   let layoutFrame = 0;
+  let dialogMotion = null, closing = null;
+  let confirmMotion = null, confirmClosing = null;
 
   const state = () => W2App.App.state;
 
@@ -20,6 +22,8 @@ const TaskDialog = (() => {
   }
 
   function open({ mode, task, start, end }) {
+    cancelDialogMotion();
+    closing = null;
     layoutObserver?.disconnect();
     const st = state();
     const t = task || {
@@ -33,7 +37,6 @@ const TaskDialog = (() => {
       <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlgHead">
         <div class="dialog-header">
           <h3 id="dlgHead">${mode === 'new' ? '新建日程' : '编辑日程'}</h3>
-          <div class="preview-bar" id="dlgPreview" aria-label="日程条预览"></div>
         </div>
         <div class="dialog-scroll">
           <div class="dialog-fields">
@@ -85,7 +88,6 @@ const TaskDialog = (() => {
     modal.hidden = false;
     wire();
     paintColors();
-    updatePreview();
     updateRemindLabel();
     layoutObserver = new ResizeObserver(() => {
       if (layoutFrame) return;
@@ -93,17 +95,36 @@ const TaskDialog = (() => {
     });
     modal.querySelectorAll('.dialog-header, .dialog-fields, .dialog-footer').forEach(el => layoutObserver.observe(el));
     measureDialog();
-    q('dlgTitle').focus();
     W2App.refreshBlock();
+    animateDialog(true);
+    q('dlgTitle').focus({ preventScroll: true });
+  }
+
+  function cancelDialogMotion() {
+    dialogMotion?.cancel();
+    dialogMotion = null;
+  }
+
+  function animateDialog(opening) {
+    if (!dialogMotion) dialogMotion = new RCPopupMotion(modal.querySelector('.dialog'), {
+      openDuration: 400,
+      openEasing: 'cubic-bezier(.2, .65, .25, 1)',
+      openFrom: 'translate(0px, 10px) scale(.88, .88)',
+      openPeak: 'translate(0px, -0.5px) scale(1.003, 1.003)',
+      openPeakOffset: .82,
+      backdrop: modal,
+      backdropColor: '#1c1c201f',
+    });
+    return opening ? dialogMotion.open() : dialogMotion.close();
   }
 
   // 按完整表单内容申请窗口空间；空间不足时只滚动中间区域，操作按钮固定。
   function measureDialog() {
-    if (!ctx) return;
+    if (!ctx || closing) return;
     const styles = getComputedStyle(modal);
     const panel = $('appShell'), panelStyle = getComputedStyle(panel);
     const height = [...modal.querySelectorAll('.dialog-header, .dialog-fields, .dialog-footer')]
-      .reduce((sum, el) => sum + el.getBoundingClientRect().height, 2)
+      .reduce((sum, el) => sum + el.offsetHeight, 2)
       + parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom)
       + parseFloat(panelStyle.borderTopWidth) + parseFloat(panelStyle.borderBottomWidth);
     panel.style.setProperty('--dialog-height', `${Math.ceil(height)}px`);
@@ -139,7 +160,7 @@ const TaskDialog = (() => {
   function wire() {
     q('dlgColorToggle').addEventListener('click', () => togglePanel('Color'));
     q('dlgRemindToggle').addEventListener('click', () => togglePanel('Remind'));
-    q('dlgTitle').addEventListener('input', () => { hideErr('errTitle'); updatePreview(); });
+    q('dlgTitle').addEventListener('input', () => hideErr('errTitle'));
     q('dlgTitle').addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });   // 标题只有一行，Enter 没有反应
     ['dlgStart', 'dlgEnd'].forEach(id => q(id).addEventListener('input', () => hideErr('errDate')));
     q('dlgPicker').addEventListener('input', e => setColor(e.target.value));
@@ -166,6 +187,7 @@ const TaskDialog = (() => {
     q('dlgRecent').innerHTML = recent.map(hex => sw(hex, hex)).join('');
     q('dlgPicker').value = cur.toLowerCase();
     q('dlgColorDot').style.background = cur;
+    if (document.activeElement !== q('dlgHex')) q('dlgHex').value = cur;
     modal.querySelectorAll('.swatch').forEach(b => { b.onclick = () => setColor(b.dataset.c); });
   }
 
@@ -173,19 +195,11 @@ const TaskDialog = (() => {
     ctx.color = hex.toUpperCase();
     paintColors();
     if (!fromHex) q('dlgHex').value = ctx.color;
-    updatePreview();
-  }
-
-  // 顶部预览条：用当前标题和颜色实时画出来，直接看到条上文字的效果
-  function updatePreview() {
-    const el = q('dlgPreview');
-    el.textContent = q('dlgTitle').value.trim() || '预览';
-    el.style.background = ctx.color;
-    el.style.color = C.barText(ctx.color);
-    if (document.activeElement !== q('dlgHex')) q('dlgHex').value = ctx.color;
   }
 
   async function save() {
+    if (!ctx || closing || q('dlgSave').disabled) return;
+    const editing = ctx;
     const title = q('dlgTitle').value.trim(), startDate = q('dlgStart').value, endDate = q('dlgEnd').value;
     let bad = false;
     if (!title) { showErr('errTitle', '标题不能为空'); bad = true; }
@@ -197,11 +211,14 @@ const TaskDialog = (() => {
     const data = { title, startDate, endDate, color: ctx.color, note: q('dlgNote').value, pinned: q('dlgPinned').checked, remind };
     const mode = ctx.mode;
     q('dlgSave').disabled = true;
-    const res = mode === 'new' ? await rc.createTask(data) : await rc.updateTask(ctx.taskId, data);
-    if (!ctx) return;   // 等结果时弹窗已被放弃
+    let res;
+    try { res = mode === 'new' ? await rc.createTask(data) : await rc.updateTask(editing.taskId, data); }
+    catch (_) { res = { ok: false }; }
+    if (ctx !== editing || closing) return;   // 等结果时弹窗已关闭或换成另一条日程。
     q('dlgSave').disabled = false;
     if (res.ok) {
-      close();
+      await close();
+      if (ctx) return;
       if (mode === 'new' && res.id) flash(res.id);
       else W2App.toast('已保存');
       return;
@@ -220,7 +237,9 @@ const TaskDialog = (() => {
     }, 60);
   }
 
-  function close() {
+  function finishClose() {
+    cancelDialogMotion();
+    closing = null;
     layoutObserver?.disconnect();
     layoutObserver = null;
     cancelAnimationFrame(layoutFrame);
@@ -232,13 +251,30 @@ const TaskDialog = (() => {
     W2App.refreshBlock();
   }
 
+  function close({ animate = true } = {}) {
+    if (!ctx) return Promise.resolve();
+    if (!animate || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      finishClose();
+      return Promise.resolve();
+    }
+    if (closing) return closing;
+    const editing = ctx;
+    modal.querySelector('.dialog').inert = true;
+    closing = animateDialog(false).then(completed => {
+      if (completed && ctx === editing) finishClose();
+    });
+    return closing;
+  }
+
   // 用户主动收起 / 隐藏下拉窗：关掉弹窗，放弃没保存的内容
   function discard() {
-    closeConfirm();
-    if (ctx) close();
+    closeConfirm({ animate: false });
+    if (ctx) close({ animate: false });
   }
 
   function confirmDelete(task) {
+    confirmMotion?.cancel();
+    confirmClosing = null;
     confirmCtx = { id: task.id };
     confirmEl.innerHTML = `<div class="confirm-box" role="alertdialog" aria-modal="true">
         <p>删除日程『${K.esc(task.title)}』？</p>
@@ -247,24 +283,45 @@ const TaskDialog = (() => {
           <button type="button" class="danger-btn" id="cfDelete">删除</button>
         </div></div>`;
     confirmEl.hidden = false;
+    confirmMotion = new RCPopupMotion(confirmEl.querySelector('.confirm-box'));
+    confirmMotion.open();
     q('cfCancel').onclick = closeConfirm;
     q('cfDelete').onclick = async () => {
+      if (!confirmCtx || confirmClosing) return;
       const id = confirmCtx.id;
-      closeConfirm();
+      await closeConfirm();
       const res = await rc.deleteTask(id);
       if (!res.ok) { W2App.toast('保存失败，已恢复原来的状态', true); return; }
-      if (ctx && ctx.taskId === id) close();
+      if (ctx && ctx.taskId === id) await close();
       W2App.toast('已删除');
     };
     q('cfCancel').focus();
     W2App.refreshBlock();
   }
 
-  function closeConfirm() {
+  function finishConfirmClose() {
+    confirmMotion?.cancel();
+    confirmMotion = null;
+    confirmClosing = null;
     confirmCtx = null;
     confirmEl.hidden = true;
     confirmEl.innerHTML = '';
     W2App.refreshBlock();
+  }
+
+  function closeConfirm({ animate = true } = {}) {
+    if (!confirmCtx) return Promise.resolve();
+    if (!animate || !confirmMotion) {
+      finishConfirmClose();
+      return Promise.resolve();
+    }
+    if (confirmClosing) return confirmClosing;
+    const confirming = confirmCtx;
+    confirmEl.querySelector('.confirm-box').inert = true;
+    confirmClosing = confirmMotion.close().then(completed => {
+      if (completed && confirmCtx === confirming) finishConfirmClose();
+    });
+    return confirmClosing;
   }
 
   // 删除确认框里按 Esc：等于点「取消」，不删除

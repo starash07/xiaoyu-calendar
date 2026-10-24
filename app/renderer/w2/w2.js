@@ -20,9 +20,13 @@ const Settings = {
 rc.onSettingsVisibility?.(visible => { settingsVisible = !!visible; });
 rc.onSettingsError?.(message => toast(message, true));
 const cal = $('cal'), calwrap = $('calwrap');
+const monthStage = $('monthStage'), monthPage = $('monthPage');
+let monthMotion = null;
 let datePointerId = null;
 let reminderIndex = 0, remindersExpanded = false;
 let reminderAnimations = [];
+let queuedReminderDirection = 0, reminderWheelAmount = 0, reminderWheelTime = 0;
+let remindersHTML = null;
 let shownDetailId = null;
 
 // 按面板的实际高度调整原生窗口；上限来自屏幕剩余空间，不依赖当前窗口高度。
@@ -110,6 +114,7 @@ function render() {
 function applyAppearance() {
   const ap = A.normalize({ ...App.state?.settings.w1.appearance, ...(appearancePreview || {}) });
   shell.style.setProperty('--date-size', `${ap.dateFontSize}px`);
+  shell.style.setProperty('--detail-font-size', `${ap.detailFontSize}px`);
   shell.style.setProperty('--fg', ap.textColor);
   shell.style.setProperty('--fg2', C.rgba(ap.textColor, .72));
   shell.style.setProperty('--fg3', C.rgba(ap.textColor, .32));
@@ -126,6 +131,7 @@ function renderCalendar(ap) {
   const key = JSON.stringify([y, m, s.today, s.tasks, ap.barHeight, ap.barFontSize]);
   // 字色和日期字号只更新样式，避免滑动时反复重建日历、打断悬停和选中。
   if (key === calendarKey) return;
+  stopMonthMotion();
   calendarKey = key;
   cal.innerHTML = K.monthHTML({ year: y, month: m, tasks: s.tasks, today: s.today,
     barH: ap.barHeight, fontSize: ap.barFontSize, barRadius: 999, barGap: 5, barPadding: 8 });
@@ -227,6 +233,9 @@ function layoutReminders(animate = false) {
   const section = $('reminderSection'), box = $('reminders');
   const cards = [...box.querySelectorAll('.rm-item')];
   const moving = animate && cards.length && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  queuedReminderDirection = 0;
+  reminderWheelAmount = 0;
+  reminderWheelTime = 0;
   // 从当前画面接着运动，快速反复点击时也不会跳回动画起点。
   const oldHeight = section.getBoundingClientRect().height;
   const before = moving ? cards.map(card => ({
@@ -253,15 +262,17 @@ function layoutReminders(animate = false) {
     return { rect: card.getBoundingClientRect(), transform: style.transform, opacity: style.opacity };
   });
   const timing = { duration: 320, easing: 'cubic-bezier(.22, 1, .36, 1)' };
-  section.classList.add('is-animating');
-  const heightAnimation = section.animate([
-    { height: `${oldHeight}px`, maxHeight: 'none' },
-    { height: `${newHeight}px`, maxHeight: 'none' }
-  ], timing);
-  heightAnimation.onfinish = () => section.classList.remove('is-animating');
-  reminderAnimations.push(heightAnimation);
+  // 叠放卡片轮换时高度不变，只在展开、收起时调整容器高度。
+  if (Math.abs(newHeight - oldHeight) > .5) {
+    section.classList.add('is-animating');
+    reminderAnimations.push(section.animate([
+      { height: `${oldHeight}px`, maxHeight: 'none' },
+      { height: `${newHeight}px`, maxHeight: 'none' }
+    ], timing));
+  }
   cards.forEach((card, index) => {
     const from = before[index], to = targets[index];
+    if (+from.opacity === 0 && +to.opacity === 0) return;
     const matrix = new DOMMatrix(to.transform === 'none' ? undefined : to.transform);
     const x = from.rect.left + from.rect.width / 2 - (to.rect.left + to.rect.width / 2 - matrix.e);
     const y = from.rect.top - (to.rect.top - matrix.f);
@@ -269,9 +280,30 @@ function layoutReminders(animate = false) {
     const scaleY = from.rect.height / (to.rect.height / matrix.d);
     reminderAnimations.push(card.animate([
       { transform: `translate(${x}px, ${y}px) scale(${scaleX}, ${scaleY})`, opacity: from.opacity },
-      { transform: to.transform, opacity: to.opacity }
+      { transform: `translate(${matrix.e}px, ${matrix.f}px) scale(${matrix.a}, ${matrix.d})`, opacity: to.opacity }
     ], timing));
   });
+  const animations = reminderAnimations;
+  Promise.all(animations.map(animation => animation.finished)).then(() => {
+    if (reminderAnimations !== animations) return;
+    reminderAnimations = [];
+    section.classList.remove('is-animating');
+    const direction = queuedReminderDirection;
+    queuedReminderDirection = 0;
+    if (direction) cycleReminder(direction);
+  }, () => {});
+}
+
+function cycleReminder(direction) {
+  const count = $('reminders').children.length;
+  if (remindersExpanded || count < 2) return;
+  // 高频滚轮输入只保留下一步，不反复取消当前动画，也不积压长队列。
+  if (reminderAnimations.length) {
+    queuedReminderDirection = direction;
+    return;
+  }
+  reminderIndex = (reminderIndex + direction + count) % count;
+  layoutReminders(true);
 }
 
 function renderReminders() {
@@ -279,19 +311,23 @@ function renderReminders() {
   const items = s.reminders
     .filter(r => !r.confirmed && byId.has(r.taskId) && !byId.get(r.taskId).done)
     .sort((a, b) => (a.day < b.day ? 1 : a.day > b.day ? -1 : 0));
-  const box = $('reminders');
-  box.hidden = !items.length;
-  $('reminderSection').hidden = !items.length;
-  if (!items.length) { remindersExpanded = false; reminderIndex = 0; box.innerHTML = ''; layoutReminders(); return; }
-  $('reminderHead').textContent = `待确认提醒 ${items.length} 条`;
-  reminderIndex = Math.max(0, Math.min(reminderIndex, items.length - 1));
-  box.innerHTML = items.map((r, index) => {
+  const html = items.map((r, index) => {
     const t = byId.get(r.taskId);
     return `<article class="rm-item" data-index="${index}" data-rid="${K.esc(r.id)}" tabindex="0">`
       + `<span class="rm-title">${K.esc(t.title)}</span>`
       + `<span class="rm-reason">${K.reminderReason(r.kind, t, s.today)}</span>`
       + `<div class="rm-bottom"><button type="button" class="rm-ok" data-rid="${K.esc(r.id)}" aria-label="确认提醒：${K.esc(t.title)}">知道了</button></div></article>`;
   }).join('');
+  // 切月和无关状态更新时保留原卡片，避免重建后再次从透明状态进入。
+  if (html === remindersHTML) return;
+  remindersHTML = html;
+  const box = $('reminders');
+  box.hidden = !items.length;
+  $('reminderSection').hidden = !items.length;
+  if (!items.length) { remindersExpanded = false; reminderIndex = 0; box.innerHTML = ''; layoutReminders(); return; }
+  $('reminderHead').textContent = `待确认提醒 ${items.length} 条`;
+  reminderIndex = Math.max(0, Math.min(reminderIndex, items.length - 1));
+  box.innerHTML = html;
   layoutReminders();
 }
 
@@ -312,12 +348,19 @@ $('reminders').addEventListener('click', async e => {
 });
 
 $('reminders').addEventListener('wheel', e => {
-  const cards = $('reminders').querySelectorAll('.rm-item');
-  if (remindersExpanded || cards.length < 2 || Math.abs(e.deltaY) < 2) return;
+  const box = $('reminders');
+  if (remindersExpanded || box.children.length < 2 || !e.deltaY) return;
   e.preventDefault();
   e.stopPropagation();
-  reminderIndex = (reminderIndex + (e.deltaY > 0 ? 1 : -1) + cards.length) % cards.length;
-  layoutReminders(true);
+  const now = performance.now();
+  const delta = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? box.clientHeight : 1);
+  if (now - reminderWheelTime > 160 || Math.sign(delta) !== Math.sign(reminderWheelAmount)) reminderWheelAmount = 0;
+  reminderWheelTime = now;
+  reminderWheelAmount += delta;
+  // 累积触控板的细碎增量，避免惯性尾段每一帧都切换一张。
+  if (Math.abs(reminderWheelAmount) < 32) return;
+  reminderWheelAmount = 0;
+  cycleReminder(Math.sign(delta));
 }, { passive: false });
 
 $('reminders').addEventListener('keydown', e => {
@@ -344,24 +387,79 @@ function select(id) {
   renderDetail();
 }
 
-function shiftMonth(n) {
-  const d = new Date(App.view.y, App.view.m + n, 1);
-  App.view = { y: d.getFullYear(), m: d.getMonth() };
+function stopMonthMotion() {
+  if (!monthMotion) return;
+  const motion = monthMotion;
+  monthMotion = null;
+  motion.animations.forEach(animation => animation.cancel());
+  motion.ghost.remove();
+  monthStage.classList.remove('is-turning');
+  monthPage.inert = false;
+}
+
+function changeMonth(y, m) {
+  if (!App.state || !App.view) return Promise.resolve();
+  const direction = Math.sign((y - App.view.y) * 12 + m - App.view.m);
+  const moving = direction && monthPage.offsetHeight > 0 && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const fromStyle = getComputedStyle(monthPage);
+  const from = { transform: fromStyle.transform, opacity: fromStyle.opacity };
+  const oldHeight = monthStage.getBoundingClientRect().height;
+  const ghost = moving ? monthPage.cloneNode(true) : null;
+  stopMonthMotion();
+  App.view = { y, m };
   App.hoverId = null;
   App.selectedId = null;
   clearSelection();
   render();
+  if (!moving) return Promise.resolve();
+
+  // 旧月只作视觉叠层，不保留重复 ID 或可交互控件。
+  ghost.removeAttribute('id');
+  ghost.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+  ghost.classList.add('month-ghost');
+  ghost.setAttribute('aria-hidden', 'true');
+  ghost.inert = true;
+  monthStage.appendChild(ghost);
+  const newHeight = monthPage.offsetHeight;
+  monthStage.classList.add('is-turning');
+  monthPage.inert = true;
+  const timing = { duration: 360, easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'both' };
+  const motion = { ghost, animations: [] };
+  monthMotion = motion;
+  motion.animations.push(
+    ghost.animate([
+      { ...from, boxShadow: '0 0 0 #31587300' },
+      { transform: `translateX(${-direction * 14}%) translateZ(24px) rotateY(${direction * 9}deg) scale(.96)`, opacity: 0, boxShadow: '0 8px 24px #31587320' },
+    ], timing),
+    monthPage.animate([
+      { transform: `translateX(${direction * 10}%) translateZ(-50px) rotateY(${-direction * 7}deg) scale(.97)`, opacity: .45 },
+      { transform: 'none', opacity: 1 },
+    ], timing),
+    monthStage.animate([{ height: `${oldHeight}px` }, { height: `${newHeight}px` }], timing),
+    $('monthLabel').animate([
+      { transform: `translateY(${direction * 5}px)`, opacity: .4 },
+      { transform: 'none', opacity: 1 },
+    ], { ...timing, duration: 240 }),
+  );
+  // 连续切月从当前画面接着翻；取消旧动画不会清掉新的一轮。
+  return Promise.allSettled(motion.animations.map(animation => animation.finished)).then(() => {
+    if (monthMotion === motion) stopMonthMotion();
+  });
+}
+
+function shiftMonth(n) {
+  if (!App.view) return;
+  const d = new Date(App.view.y, App.view.m + n, 1);
+  changeMonth(d.getFullYear(), d.getMonth());
 }
 
 function goToday() {
+  if (!App.state) return;
   const t = D.parse(App.state.today);
-  App.view = { y: t.getFullYear(), m: t.getMonth() };
-  App.hoverId = null;
-  App.selectedId = null;
-  clearSelection();
-  render();
-  const cell = cal.querySelector('.cal-dc.today');
-  if (cell) cell.scrollIntoView({ block: 'nearest' });
+  const y = t.getFullYear(), m = t.getMonth();
+  changeMonth(y, m).then(() => {
+    if (App.view.y === y && App.view.m === m) cal.querySelector('.cal-dc.today')?.scrollIntoView({ block: 'nearest' });
+  });
 }
 
 // 直接新建默认今天；查看其他月份时默认该月 1 日，日期仍可修改。
@@ -486,9 +584,9 @@ cal.addEventListener('click', e => {
   if (bar) select(bar.dataset.id);
 });
 
-// 点选日程后，点主界面的其他区域就收起详情；详情里的操作按钮不触发收起。
+// 打开设置时保留固定的详情，方便即时调整字号；其他空白区域仍可收起。
 document.addEventListener('click', e => {
-  if (!App.selectedId || e.target.closest('.cal-bar') || e.target.closest('.detail-section') || e.target.closest('.overlay') || e.target.closest('.page')) return;
+  if (!App.selectedId || e.target.closest('.cal-bar, .detail-section, .overlay, .page, #settingsBtn')) return;
   select(null);
 });
 
@@ -529,6 +627,9 @@ rc.onCommand(cmd => {
   else if (cmd.type === 'discard') { TaskDialog.discard(); Settings.close({ animate: false, restoreFocus: false }); clearSelection(); }
 });
 
+// 主窗口收回后解除详情固定；再次展开时保持详情隐藏。
+rc.onW2Retracted?.(() => select(null));
+
 rc.onState(s => { App.state = s; render(); });
 rc.onW2Preview?.(ap => {
   appearancePreview = ap;
@@ -537,6 +638,7 @@ rc.onW2Preview?.(ap => {
     appearanceFrame = 0;
     if (!App.state || !App.view) return;
     renderCalendar(applyAppearance());
+    measureDetail();
     reportHeight();
   });
 });

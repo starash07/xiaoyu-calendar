@@ -64,14 +64,12 @@ function start() {
 
   tray = createTray({
     toggle: () => w2.toggle(),
-    newTask: () => w2.command({ type: 'new' }),
+    show: () => w2.show(),
     settings: () => w2.command({ type: 'settings' }),
     isPinned: () => !!store.settings.w1.pinned,
-    setPinned: on => { w1.setPinned(on); broadcast(); },
+    setPinned: on => { const result = w1.setPinned(on); broadcast(); return result; },
     todayCount,
-    autoStart: () => !!store.settings.general.autoStart,
-    setAutoStart,
-    loadSamples: () => store.loadSamples(),
+    restart: () => { app.relaunch(); app.quit(); },
     quit: () => app.quit(),
   });
 
@@ -89,6 +87,9 @@ function start() {
   ipcMain.handle('state:get', () => state());
   ipcMain.on('w1:ready', () => w1.sendInfo());
   ipcMain.on('w1:size', (e, { w, h }) => w1.resize(w, h));
+  ipcMain.on('w1:controls', (e, controls) => {
+    if (e.sender === w1.win?.webContents) w1.reportControls(controls);
+  });
   ipcMain.on('w1:drag', () => w1.dragStart());
   ipcMain.handle('w1:pin', (e, pinned) => { const r = w1.setPinned(!!pinned); broadcast(); return r; });
   ipcMain.handle('w1:reset', () => w1.resetPosition());
@@ -132,7 +133,7 @@ function start() {
 
   app.on('second-instance', () => w2.show());   // 重复启动：唤出已经在运行的下拉窗
   app.on('window-all-closed', () => { /* 常驻托盘，不因为窗口都关了就退出 */ });
-  app.on('before-quit', () => { settingsWindow.close(); w1.destroy(); w2.destroy(); });
+  app.on('before-quit', () => { tray?.destroy(); settingsWindow.close(); w1.destroy(); w2.destroy(); });
 
   if (P.SELFTEST) require(process.argv.includes('--desktop-smoke') ? './w1-smoke-selftest' : './selftest').run({ store, w1, w2, settingsWindow, broadcast });
 }
